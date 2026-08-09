@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+
+<title>WARIKAN - 割り勘計算</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/tesseract.min.js"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0f172a;
+  --card: rgba(255,255,255,.08);
+  --border: rgba(255,255,255,.12);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Noto Sans JP",
+    sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(56,189,248,.15), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(99,102,241,.18), transparent 30%),
+    var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.app {
+  width: min(1050px, 100%);
+}
+
+/* ヘッダー */
+
+header {
+  margin-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  box-shadow: 0 10px 30px rgba(56,189,248,.2);
+}
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: .08em;
+}
+
+.brand-text p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* メイン */
+
+.main-card {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,.35),
+    inset 0 1px rgba(255,255,255,.05);
+}
+
+/* 入力 */
+
+.input-panel {
+  padding: 18px;
+}
+
+.section-title {
+  margin: 0 0 20px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #cbd5e1;
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.input-box {
+  position: relative;
+}
+
+input[type="number"] {
+  width: 100%;
+  height: 68px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 17px;
+  outline: none;
+  padding: 0 65px 0 18px;
+  background: rgba(255,255,255,.96);
+  color: #111827;
+  font-size: 27px;
+  font-weight: 800;
+  transition: .2s;
+}
+
+input[type="number"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(56,189,248,.12);
+}
+
+.unit {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* OCR */
+
+#receiptInput {
+  display: none;
+}
+
+.ocr-button {
+  width: 100%;
+  height: 56px;
+  margin-top: -5px;
+  margin-bottom: 22px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(56,189,248,.15);
+  transition: .2s;
+}
+
+.ocr-button:hover {
+  transform: translateY(-1px);
+}
+
+.ocr-button:active {
+  transform: scale(.98);
+}
+
+.ocr-button:disabled {
+  opacity: .55;
+  cursor: wait;
+  transform: none;
+}
+
+.ocr-status {
+  display: none;
+  margin: -10px 0 20px;
+  padding: 12px 15px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.06);
+  color: #cbd5e1;
+  font-size: 12px;
+  text-align: center;
+}
+
+.ocr-status.show {
+  display: block;
+}
+
+.ocr-status.error {
+  color: #fca5a5;
+}
+
+.ocr-status.success {
+  color: #86efac;
+}
+
+/* 端数 */
+
+.rounding {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.rounding input {
+  display: none;
+}
+
+.rounding label {
+  height: 50px;
+  margin: 0;
+  border-radius: 13px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.05);
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  transition: .2s;
+}
+
+.rounding label:hover {
+  background: rgba(255,255,255,.1);
+}
+
+/*
+ * ★ デフォルトは必ず「そのまま」
+ */
+#r0:checked + label {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #f8fafc;
+}
+
+.rounding input:checked + label {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #f8fafc;
+}
+
+/* 結果 */
+
+.result-panel {
+  min-height: 450px;
+  border-radius: 24px;
+  padding: 34px;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  box-shadow:
+    0 20px 50px rgba(0,0,0,.15),
+    inset 0 1px rgba(255,255,255,.8);
+}
+
+.result-label {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+
+.result-number {
+  margin: 12px 0 4px;
+  font-size: clamp(65px, 8vw, 105px);
+  line-height: .95;
+  font-weight: 900;
+  letter-spacing: -.06em;
+}
+
+.result-number .yen {
+  margin-left: 7px;
+  font-size: .32em;
+  letter-spacing: 0;
+}
+
+.result-info {
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.result-info strong {
+  color: #334155;
+}
+
+.difference {
+  margin: 22px auto 0;
+  padding: 9px 15px;
+  border-radius: 100px;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ボタン */
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+button {
+  height: 50px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: .2s;
+}
+
+.reset {
+  flex: 1;
+  color: #cbd5e1;
+  background: rgba(255,255,255,.06);
+}
+
+.copy {
+  flex: 1.5;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: scale(.98);
+}
+
+.copied {
+  background: #bbf7d0 !important;
+}
+
+/* OCR確認 */
+
+.ocr-result {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  padding: 20px;
+  background: rgba(2,6,23,.72);
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ocr-result.show {
+  display: flex;
+}
+
+.ocr-result-card {
+  width: min(440px, 100%);
+  padding: 28px;
+  border-radius: 26px;
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 30px 80px rgba(0,0,0,.35);
+}
+
+.ocr-result-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.ocr-result-description {
+  margin: 0 0 22px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ocr-total-preview {
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 18px;
+  background: #e0f2fe;
+  text-align: center;
+}
+
+.ocr-total-preview-label {
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ocr-total-preview-number {
+  margin-top: 5px;
+  color: #0f172a;
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.ocr-total-preview-number span {
+  margin-left: 5px;
+  font-size: 16px;
+}
+
+.ocr-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ocr-candidate {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #cbd5e1;
+  border-radius: 13px;
+  background: white;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.ocr-candidate:hover {
+  background: #f1f5f9;
+}
+
+.ocr-candidate.selected {
+  border-color: #38bdf8;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.ocr-modal-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.ocr-confirm {
+  flex: 1;
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ocr-cancel {
+  flex: 1;
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* フッター */
+
+footer {
+  text-align: center;
+  margin-top: 15px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+/* タブレット */
+
+@media (max-width: 760px) {
+
+  body {
+    padding: 18px;
+    align-items: flex-start;
+  }
+
+  .main-card {
+    grid-template-columns: 1fr;
+  }
+
+  .result-panel {
+    min-height: 360px;
+  }
+}
+
+/* スマホ */
+
+@media (max-width: 480px) {
+
+  body {
+    padding: 14px;
+  }
+
+  header {
+    margin-bottom: 14px;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+
+  .brand-text h1 {
+    font-size: 22px;
+  }
+
+  .main-card {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 24px;
+  }
+
+  .input-panel {
+    padding: 10px 8px;
+  }
+
+  .result-panel {
+    min-height: 330px;
+    padding: 24px 15px;
+    border-radius: 20px;
+  }
+
+  .rounding {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .result-number {
+    font-size: 65px;
+  }
+
+  .buttons {
+    margin-top: 15px;
+  }
+
+  .ocr-result {
+    padding: 14px;
+  }
+
+  .ocr-result-card {
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .ocr-total-preview-number {
+    font-size: 38px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <header>
+
+    <div class="brand">
+
+      <div class="logo">
+        ¥
+      </div>
+
+      <div class="brand-text">
+
+        <h1>WARIKAN</h1>
+
+        <p>
+          シンプル割り勘計算
+        </p>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <main class="main-card">
+
+
+    <!-- 入力パネル -->
+
+    <section class="input-panel">
+
+      <h2 class="section-title">
+        金額と人数を入力
+      </h2>
+
+
+      <!-- 総額 -->
+
+      <div class="field">
+
+        <label for="total">
+          総額
+        </label>
+
+        <div class="input-box">
+
+          <input
+            id="total"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="100"
+            value="10000"
+          >
+
+          <span class="unit">
+            円
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- レシートOCR -->
+
+      <input
+        type="file"
+        id="receiptInput"
+        accept="image/*"
+      >
+
+      <button
+        class="ocr-button"
+        id="ocrButton"
+      >
+        📷 レシートから読み取る
+      </button>
+
+      <div
+        class="ocr-status"
+        id="ocrStatus"
+      ></div>
+
+
+      <!-- 人数 -->
+
+      <div class="field">
+
+        <label for="people">
+          参加人数
+        </label>
+
+        <div class="input-box">
+
+          <input
+            id="people"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            step="1"
+            value="4"
+          >
+
+          <span class="unit">
+            人
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- 端数 -->
+
+      <div class="field">
+
+        <label>
+          1人あたりの端数を切り上げ
+        </label>
+
+        <div class="rounding">
+
+
+          <!-- ★ 必ずデフォルト -->
+
+          <div>
+
+            <input
+              type="radio"
+              name="rounding"
+              id="r0"
+              value="1"
+              checked
+            >
+
+            <label for="r0">
+              そのまま
+            </label>
+
+          </div>
+
+
+          <div>
+
+            <input
+              type="radio"
+              name="rounding"
+              id="r100"
+              value="100"
+            >
+
+            <label for="r100">
+              100円
+            </label>
+
+          </div>
+
+
+          <div>
+
+            <input
+              type="radio"
+              name="rounding"
+              id="r500"
+              value="500"
+            >
+
+            <label for="r500">
+              500円
+            </label>
+
+          </div>
+
+
+          <div>
+
+            <input
+              type="radio"
+              name="rounding"
+              id="r1000"
+              value="1000"
+            >
+
+            <label for="r1000">
+              1000円
+            </label>
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+
+      <!-- ボタン -->
+
+      <div class="buttons">
+
+        <button
+          class="reset"
+          id="resetButton"
+        >
+          ↺ リセット
+        </button>
+
+        <button
+          class="copy"
+          id="copyButton"
+        >
+          ⧉ 結果をコピー
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- 結果パネル -->
+
+    <section class="result-panel">
+
+      <div class="result-label">
+        1人あたり
+      </div>
+
+      <div class="result-number">
+
+        <span id="result">
+          2,500
+        </span>
+
+        <span class="yen">
+          円
+        </span>
+
+      </div>
+
+      <div class="result-info">
+
+        総額
+        <strong id="totalText">
+          10,000円
+        </strong>
+
+        ／
+
+        <strong id="peopleText">
+          4人
+        </strong>
+
+      </div>
+
+      <div
+        class="difference"
+        id="difference"
+      >
+        集金合計 10,000円
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- OCR確認画面 -->
+
+  <div
+    class="ocr-result"
+    id="ocrResult"
+  >
+
+    <div class="ocr-result-card">
+
+      <h2 class="ocr-result-title">
+        レシートを読み取りました
+      </h2>
+
+      <p class="ocr-result-description">
+
+        合計金額の候補を確認してください。
+        正しい金額を選んで
+        「この金額で計算」を押します。
+
+      </p>
+
+      <div class="ocr-total-preview">
+
+        <div class="ocr-total-preview-label">
+          選択中の金額
+        </div>
+
+        <div class="ocr-total-preview-number">
+
+          <span id="ocrSelectedAmount">
+            0
+          </span>
+
+          <span>
+            円
+          </span>
+
+        </div>
+
+      </div>
+
+      <div
+        class="ocr-candidates"
+        id="ocrCandidates"
+      ></div>
+
+      <div class="ocr-modal-buttons">
+
+        <button
+          class="ocr-cancel"
+          id="ocrCancel"
+        >
+          閉じる
+        </button>
+
+        <button
+          class="ocr-confirm"
+          id="ocrConfirm"
+        >
+          この金額で計算
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <footer>
+    ブラウザだけで動作する
+    シンプル割り勘計算ツール
+  </footer>
+
+</div>
+
+
+<script>
+
+/* ==================================================
+   基本計算
+================================================== */
+
+const totalInput =
+  document.getElementById("total");
+
+const peopleInput =
+  document.getElementById("people");
+
+const resultElement =
+  document.getElementById("result");
+
+const totalText =
+  document.getElementById("totalText");
+
+const peopleText =
+  document.getElementById("peopleText");
+
+const differenceElement =
+  document.getElementById("difference");
+
+const resetButton =
+  document.getElementById("resetButton");
+
+const copyButton =
+  document.getElementById("copyButton");
+
+const roundingInputs =
+  document.querySelectorAll(
+    'input[name="rounding"]'
+  );
+
+
+function formatNumber(number) {
+
+  return Math.round(number)
+    .toLocaleString("ja-JP");
+
+}
+
+
+function calculate() {
+
+  const total =
+    Number(totalInput.value) || 0;
+
+  const people =
+    Math.max(
+      Number(peopleInput.value) || 1,
+      1
+    );
+
+  const rounding =
+    Number(
+      document.querySelector(
+        'input[name="rounding"]:checked'
+      ).value
+    );
+
+  const rawAmount =
+    total / people;
+
+  let amount;
+
+
+  /*
+   * 「そのまま」の場合
+   *
+   * 小数もそのまま表示するのではなく、
+   * 円単位で計算するため整数にしています。
+   */
+
+  if (rounding === 1) {
+
+    amount =
+      Math.round(rawAmount);
+
+  } else {
+
+    amount =
+      Math.ceil(
+        rawAmount / rounding
+      ) * rounding;
+
+  }
+
+
+  const collected =
+    amount * people;
+
+  const difference =
+    collected - total;
+
+
+  resultElement.textContent =
+    formatNumber(amount);
+
+
+  totalText.textContent =
+    formatNumber(total) + "円";
+
+
+  peopleText.textContent =
+    people + "人";
+
+
+  if (difference > 0) {
+
+    differenceElement.textContent =
+      "集金合計 " +
+      formatNumber(collected) +
+      "円 ／ 余り " +
+      formatNumber(difference) +
+      "円";
+
+  } else {
+
+    differenceElement.textContent =
+      "集金合計 " +
+      formatNumber(collected) +
+      "円";
+
+  }
+
+}
+
+
+totalInput.addEventListener(
+  "input",
+  calculate
+);
+
+
+peopleInput.addEventListener(
+  "input",
+  calculate
+);
+
+
+roundingInputs.forEach(
+  input => {
+
+    input.addEventListener(
+      "change",
+      calculate
+    );
+
+  }
+);
+
+
+/* ==================================================
+   リセット
+   ★ 必ず「そのまま」に戻す
+================================================== */
+
+resetButton.addEventListener(
+  "click",
+  () => {
+
+    totalInput.value =
+      10000;
+
+    peopleInput.value =
+      4;
+
+
+    /*
+     * ★ リセット時も
+     * 「そのまま」を強制選択
+     */
+
+    document.getElementById(
+      "r0"
+    ).checked = true;
+
+
+    /*
+     * 念のため他の選択を解除
+     */
+
+    document.getElementById(
+      "r100"
+    ).checked = false;
+
+    document.getElementById(
+      "r500"
+    ).checked = false;
+
+    document.getElementById(
+      "r1000"
+    ).checked = false;
+
+
+    calculate();
+
+  }
+);
+
+
+/* ==================================================
+   コピー
+================================================== */
+
+copyButton.addEventListener(
+  "click",
+  async () => {
+
+    const total =
+      Number(totalInput.value) || 0;
+
+    const people =
+      Number(peopleInput.value) || 1;
+
+    const amount =
+      resultElement.textContent;
+
+
+    const text =
+      `割り勘結果\n` +
+      `総額：${formatNumber(total)}円\n` +
+      `人数：${people}人\n` +
+      `1人あたり：${amount}円`;
+
+
+    try {
+
+      await navigator.clipboard
+        .writeText(text);
+
+
+      copyButton.textContent =
+        "✓ コピーしました";
+
+      copyButton.classList.add(
+        "copied"
+      );
+
+
+      setTimeout(
+        () => {
+
+          copyButton.textContent =
+            "⧉ 結果をコピー";
+
+          copyButton.classList.remove(
+            "copied"
+          );
+
+        },
+        1500
+      );
+
+
+    } catch (error) {
+
+      alert(text);
+
+    }
+
+  }
+);
+
+
+/* ==================================================
+   レシートOCR
+================================================== */
+
+const receiptInput =
+  document.getElementById(
+    "receiptInput"
+  );
+
+const ocrButton =
+  document.getElementById(
+    "ocrButton"
+  );
+
+const ocrStatus =
+  document.getElementById(
+    "ocrStatus"
+  );
+
+const ocrResult =
+  document.getElementById(
+    "ocrResult"
+  );
+
+const ocrCandidates =
+  document.getElementById(
+    "ocrCandidates"
+  );
+
+const ocrSelectedAmount =
+  document.getElementById(
+    "ocrSelectedAmount"
+  );
+
+const ocrConfirm =
+  document.getElementById(
+    "ocrConfirm"
+  );
+
+const ocrCancel =
+  document.getElementById(
+    "ocrCancel"
+  );
+
+
+let ocrWorker =
+  null;
+
+let selectedOCRAmount =
+  null;
+
+
+/* OCRステータス */
+
+function showOCRStatus(
+  message,
+  type = ""
+) {
+
+  ocrStatus.textContent =
+    message;
+
+  ocrStatus.className =
+    "ocr-status show " +
+    type;
+
+}
+
+
+/* OCRボタン */
+
+ocrButton.addEventListener(
+  "click",
+  () => {
+
+    receiptInput.click();
+
+  }
+);
+
+
+/* レシート選択 */
+
+receiptInput.addEventListener(
+  "change",
+  async event => {
+
+    const file =
+      event.target.files[0];
+
+
+    if (!file) {
+      return;
+    }
+
+
+    try {
+
+      ocrButton.disabled =
+        true;
+
+
+      showOCRStatus(
+        "📷 レシートを解析しています…"
+      );
+
+
+      /*
+       * OCRエンジンを初回だけ作成
+       */
+
+      if (!ocrWorker) {
+
+        showOCRStatus(
+          "🔧 OCRエンジンを準備しています…"
+        );
+
+
+        ocrWorker =
+          await Tesseract.createWorker(
+            ["jpn", "eng"],
+            1,
+            {
+
+              logger:
+                message => {
+
+                  if (
+                    message.status &&
+                    typeof message.progress ===
+                    "number"
+                  ) {
+
+                    const percent =
+                      Math.round(
+                        message.progress *
+                        100
+                      );
+
+
+                    showOCRStatus(
+                      "🔍 OCR解析中… " +
+                      percent +
+                      "%"
+                    );
+
+                  }
+
+                }
+
+            }
+          );
+
+      }
+
+
+      showOCRStatus(
+        "🔍 レシートを読み取っています…"
+      );
+
+
+      const result =
+        await ocrWorker.recognize(
+          file
+        );
+
+
+      const text =
+        result.data.text;
+
+
+      console.log(
+        "OCR全文:",
+        text
+      );
+
+
+      const candidates =
+        findReceiptAmountCandidates(
+          text
+        );
+
+
+      if (
+        candidates.length === 0
+      ) {
+
+        showOCRStatus(
+          "⚠ 合計金額を見つけられませんでした。写真を明るくして、もう一度試してください。",
+          "error"
+        );
+
+        return;
+      }
+
+
+      openOCRResult(
+        candidates
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "OCR Error:",
+        error
+      );
+
+
+      showOCRStatus(
+        "⚠ OCRでエラーが発生しました。画像を変えてもう一度試してください。",
+        "error"
+      );
+
+
+    } finally {
+
+      ocrButton.disabled =
+        false;
+
+      receiptInput.value =
+        "";
+
+    }
+
+  }
+);
+
+
+/* OCR結果画面 */
+
+function openOCRResult(
+  candidates
+) {
+
+  selectedOCRAmount =
+    candidates[0];
+
+
+  ocrSelectedAmount.textContent =
+    formatNumber(
+      selectedOCRAmount
+    );
+
+
+  ocrCandidates.innerHTML =
+    "";
+
+
+  candidates.forEach(
+    (amount, index) => {
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+
+      button.type =
+        "button";
+
+
+      button.className =
+        "ocr-candidate";
+
+
+      if (
+        index === 0
+      ) {
+
+        button.classList.add(
+          "selected"
+        );
+
+      }
+
+
+      button.textContent =
+        formatNumber(
+          amount
+        ) +
+        "円";
+
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          selectedOCRAmount =
+            amount;
+
+
+          ocrSelectedAmount
+            .textContent =
+            formatNumber(
+              amount
+            );
+
+
+          document
+            .querySelectorAll(
+              ".ocr-candidate"
+            )
+            .forEach(
+              item => {
+
+                item.classList.remove(
+                  "selected"
+                );
+
+              }
+            );
+
+
+          button.classList.add(
+            "selected"
+          );
+
+        }
+      );
+
+
+      ocrCandidates.appendChild(
+        button
+      );
+
+    }
+  );
+
+
+  ocrResult.classList.add(
+    "show"
+  );
+
+}
+
+
+/* OCR結果を確定 */
+
+ocrConfirm.addEventListener(
+  "click",
+  () => {
+
+    if (
+      selectedOCRAmount === null
+    ) {
+      return;
+    }
+
+
+    totalInput.value =
+      selectedOCRAmount;
+
+
+    calculate();
+
+
+    ocrResult.classList.remove(
+      "show"
+    );
+
+
+    showOCRStatus(
+      "✓ 合計 " +
+      formatNumber(
+        selectedOCRAmount
+      ) +
+      "円を総額に入力しました",
+      "success"
+    );
+
+  }
+);
+
+
+/* OCR画面を閉じる */
+
+ocrCancel.addEventListener(
+  "click",
+  () => {
+
+    ocrResult.classList.remove(
+      "show"
+    );
+
+  }
+);
+
+
+/* 背景クリックで閉じる */
+
+ocrResult.addEventListener(
+  "click",
+  event => {
+
+    if (
+      event.target ===
+      ocrResult
+    ) {
+
+      ocrResult.classList.remove(
+        "show"
+      );
+
+    }
+
+  }
+);
+
+
+/* ==================================================
+   OCR金額候補
+================================================== */
+
+function findReceiptAmountCandidates(
+  text
+) {
+
+  const lines =
+    text
+      .split(/\r?\n/)
+      .map(
+        line =>
+          line.trim()
+      )
+      .filter(Boolean);
+
+
+  const candidates =
+    [];
+
+
+  const priorityKeywords = [
+
+    "合計",
+    "ご請求額",
+    "請求額",
+    "お会計",
+    "お支払",
+    "お支払い",
+    "TOTAL",
+    "Total",
+    "total",
+    "AMOUNT",
+    "Amount"
+
+  ];
+
+
+  /*
+   * 合計などを含む行を優先
+   */
+
+  for (
+    const line of lines
+  ) {
+
+    const isPriority =
+      priorityKeywords.some(
+        keyword =>
+          line.includes(
+            keyword
+          )
+      );
+
+
+    if (!isPriority) {
+      continue;
+    }
+
+
+    const amounts =
+      extractAllAmounts(
+        line
+      );
+
+
+    amounts.forEach(
+      amount => {
+
+        if (
+          isReasonableReceiptAmount(
+            amount
+          )
+        ) {
+
+          candidates.push({
+            amount:
+              amount,
+
+            score:
+              100
+
+          });
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /*
+   * 通常の金額
+   */
+
+  for (
+    let i = 0;
+    i < lines.length;
+    i++
+  ) {
+
+    const line =
+      lines[i];
+
+
+    const amounts =
+      extractAllAmounts(
+        line
+      );
+
+
+    amounts.forEach(
+      amount => {
+
+        if (
+          isReasonableReceiptAmount(
+            amount
+          )
+        ) {
+
+          let score =
+            10;
+
+
+          if (
+            i >
+            lines.length *
+            0.55
+          ) {
+
+            score +=
+              15;
+
+          }
+
+
+          candidates.push({
+            amount:
+              amount,
+
+            score:
+              score
+
+          });
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /*
+   * 重複削除
+   */
+
+  const unique =
+    new Map();
+
+
+  candidates.forEach(
+    item => {
+
+      const current =
+        unique.get(
+          item.amount
+        );
+
+
+      if (
+        !current ||
+        item.score >
+        current.score
+      ) {
+
+        unique.set(
+          item.amount,
+          item
+        );
+
+      }
+
+    }
+  );
+
+
+  /*
+   * スコア順
+   */
+
+  return Array.from(
+    unique.values()
+  )
+    .sort(
+      (a, b) => {
+
+        if (
+          b.score !==
+          a.score
+        ) {
+
+          return b.score -
+            a.score;
+
+        }
+
+
+        return b.amount -
+          a.amount;
+
+      }
+    )
+    .map(
+      item =>
+        item.amount
+    )
+    .slice(0, 6);
+
+}
+
+
+/* ==================================================
+   金額抽出
+================================================== */
+
+function extractAllAmounts(
+  line
+) {
+
+  const matches =
+    line.match(
+      /(?:¥|￥)?\s*(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,7})\s*(?:円)?/g
+    );
+
+
+  if (!matches) {
+    return [];
+  }
+
+
+  return matches
+
+    .map(
+      value => {
+
+        const cleaned =
+          value.replace(
+            /[¥￥円,\s]/g,
+            ""
+          );
+
+
+        const number =
+          Number(
+            cleaned
+          );
+
+
+        return Number.isFinite(
+          number
+        )
+          ? number
+          : null;
+
+      }
+    )
+
+    .filter(
+      value =>
+        value !== null
+    );
+
+}
+
+
+/* 金額チェック */
+
+function isReasonableReceiptAmount(
+  amount
+) {
+
+  return (
+    amount >= 10 &&
+    amount <= 1000000
+  );
+
+}
+
+
+/* ==================================================
+   初期状態
+   ★ ページを開いた時も必ず「そのまま」
+================================================== */
+
+document.getElementById(
+  "r0"
+).checked = true;
+
+document.getElementById(
+  "r100"
+).checked = false;
+
+document.getElementById(
+  "r500"
+).checked = false;
+
+document.getElementById(
+  "r1000"
+).checked = false;
+
+
+/* 初回計算 */
+
+calculate();
+
+</script>
+
+</body>
+</html>
