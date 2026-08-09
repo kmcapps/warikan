@@ -47,8 +47,6 @@ body {
   width: min(1050px, 100%);
 }
 
-/* ヘッダー */
-
 header {
   margin-bottom: 20px;
 }
@@ -83,8 +81,6 @@ header {
   font-size: 12px;
 }
 
-/* メイン */
-
 .main-card {
   display: grid;
   grid-template-columns: 1fr 1.15fr;
@@ -99,8 +95,6 @@ header {
     0 30px 80px rgba(0,0,0,.35),
     inset 0 1px rgba(255,255,255,.05);
 }
-
-/* 入力 */
 
 .input-panel {
   padding: 18px;
@@ -249,15 +243,6 @@ input[type="number"]:focus {
   background: rgba(255,255,255,.1);
 }
 
-/*
- * ★ デフォルトは必ず「そのまま」
- */
-#r0:checked + label {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #f8fafc;
-}
-
 .rounding input:checked + label {
   background: #f8fafc;
   color: #0f172a;
@@ -363,135 +348,6 @@ button:active {
   background: #bbf7d0 !important;
 }
 
-/* OCR確認 */
-
-.ocr-result {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  inset: 0;
-  padding: 20px;
-  background: rgba(2,6,23,.72);
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.ocr-result.show {
-  display: flex;
-}
-
-.ocr-result-card {
-  width: min(440px, 100%);
-  padding: 28px;
-  border-radius: 26px;
-  background: #f8fafc;
-  color: #0f172a;
-  box-shadow: 0 30px 80px rgba(0,0,0,.35);
-}
-
-.ocr-result-title {
-  margin: 0 0 8px;
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.ocr-result-description {
-  margin: 0 0 22px;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.ocr-total-preview {
-  margin-bottom: 20px;
-  padding: 20px;
-  border-radius: 18px;
-  background: #e0f2fe;
-  text-align: center;
-}
-
-.ocr-total-preview-label {
-  color: #0369a1;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.ocr-total-preview-number {
-  margin-top: 5px;
-  color: #0f172a;
-  font-size: 44px;
-  line-height: 1;
-  font-weight: 900;
-}
-
-.ocr-total-preview-number span {
-  margin-left: 5px;
-  font-size: 16px;
-}
-
-.ocr-candidates {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.ocr-candidate {
-  width: 100%;
-  min-height: 48px;
-  border: 1px solid #cbd5e1;
-  border-radius: 13px;
-  background: white;
-  color: #334155;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: .15s;
-}
-
-.ocr-candidate:hover {
-  background: #f1f5f9;
-}
-
-.ocr-candidate.selected {
-  border-color: #38bdf8;
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.ocr-modal-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.ocr-confirm {
-  flex: 1;
-  height: 52px;
-  border: 0;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #38bdf8, #6366f1);
-  color: white;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.ocr-cancel {
-  flex: 1;
-  height: 52px;
-  border: 0;
-  border-radius: 14px;
-  background: #e2e8f0;
-  color: #475569;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-/* フッター */
-
 footer {
   text-align: center;
   margin-top: 15px;
@@ -566,19 +422,6 @@ footer {
   .buttons {
     margin-top: 15px;
   }
-
-  .ocr-result {
-    padding: 14px;
-  }
-
-  .ocr-result-card {
-    padding: 22px;
-    border-radius: 22px;
-  }
-
-  .ocr-total-preview-number {
-    font-size: 38px;
-  }
 }
 </style>
 </head>
@@ -588,30 +431,20 @@ footer {
 <div class="app">
 
   <header>
-
     <div class="brand">
 
-      <div class="logo">
-        ¥
-      </div>
+      <div class="logo">¥</div>
 
       <div class="brand-text">
-
         <h1>WARIKAN</h1>
-
-        <p>
-          シンプル割り勘計算
-        </p>
-
+        <p>シンプル割り勘計算</p>
       </div>
 
     </div>
-
   </header>
 
 
   <main class="main-card">
-
 
     <!-- 入力パネル -->
 
@@ -650,19 +483,21 @@ footer {
       </div>
 
 
-      <!-- レシートOCR -->
+      <!-- レシート撮影・OCR -->
 
       <input
         type="file"
         id="receiptInput"
         accept="image/*"
+        capture="environment"
       >
 
       <button
         class="ocr-button"
         id="ocrButton"
+        type="button"
       >
-        📷 レシートから読み取る
+        📷 レシートを撮影して自動入力
       </button>
 
       <div
@@ -709,11 +544,7 @@ footer {
 
         <div class="rounding">
 
-
-          <!-- ★ 必ずデフォルト -->
-
           <div>
-
             <input
               type="radio"
               name="rounding"
@@ -725,12 +556,10 @@ footer {
             <label for="r0">
               そのまま
             </label>
-
           </div>
 
 
           <div>
-
             <input
               type="radio"
               name="rounding"
@@ -741,12 +570,10 @@ footer {
             <label for="r100">
               100円
             </label>
-
           </div>
 
 
           <div>
-
             <input
               type="radio"
               name="rounding"
@@ -757,12 +584,10 @@ footer {
             <label for="r500">
               500円
             </label>
-
           </div>
 
 
           <div>
-
             <input
               type="radio"
               name="rounding"
@@ -773,9 +598,7 @@ footer {
             <label for="r1000">
               1000円
             </label>
-
           </div>
-
 
         </div>
 
@@ -789,6 +612,7 @@ footer {
         <button
           class="reset"
           id="resetButton"
+          type="button"
         >
           ↺ リセット
         </button>
@@ -796,6 +620,7 @@ footer {
         <button
           class="copy"
           id="copyButton"
+          type="button"
         >
           ⧉ 結果をコピー
         </button>
@@ -805,7 +630,7 @@ footer {
     </section>
 
 
-    <!-- 結果パネル -->
+    <!-- 結果 -->
 
     <section class="result-panel">
 
@@ -852,78 +677,8 @@ footer {
   </main>
 
 
-  <!-- OCR確認画面 -->
-
-  <div
-    class="ocr-result"
-    id="ocrResult"
-  >
-
-    <div class="ocr-result-card">
-
-      <h2 class="ocr-result-title">
-        レシートを読み取りました
-      </h2>
-
-      <p class="ocr-result-description">
-
-        合計金額の候補を確認してください。
-        正しい金額を選んで
-        「この金額で計算」を押します。
-
-      </p>
-
-      <div class="ocr-total-preview">
-
-        <div class="ocr-total-preview-label">
-          選択中の金額
-        </div>
-
-        <div class="ocr-total-preview-number">
-
-          <span id="ocrSelectedAmount">
-            0
-          </span>
-
-          <span>
-            円
-          </span>
-
-        </div>
-
-      </div>
-
-      <div
-        class="ocr-candidates"
-        id="ocrCandidates"
-      ></div>
-
-      <div class="ocr-modal-buttons">
-
-        <button
-          class="ocr-cancel"
-          id="ocrCancel"
-        >
-          閉じる
-        </button>
-
-        <button
-          class="ocr-confirm"
-          id="ocrConfirm"
-        >
-          この金額で計算
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
   <footer>
-    ブラウザだけで動作する
-    シンプル割り勘計算ツール
+    ブラウザだけで動作するシンプル割り勘計算ツール
   </footer>
 
 </div>
@@ -932,7 +687,7 @@ footer {
 <script>
 
 /* ==================================================
-   基本計算
+   基本設定
 ================================================== */
 
 const totalInput =
@@ -965,6 +720,10 @@ const roundingInputs =
   );
 
 
+/* ==================================================
+   数字表示
+================================================== */
+
 function formatNumber(number) {
 
   return Math.round(number)
@@ -972,6 +731,10 @@ function formatNumber(number) {
 
 }
 
+
+/* ==================================================
+   割り勘計算
+================================================== */
 
 function calculate() {
 
@@ -984,12 +747,15 @@ function calculate() {
       1
     );
 
-  const rounding =
-    Number(
-      document.querySelector(
-        'input[name="rounding"]:checked'
-      ).value
+  const checkedRounding =
+    document.querySelector(
+      'input[name="rounding"]:checked'
     );
+
+  const rounding =
+    checkedRounding
+      ? Number(checkedRounding.value)
+      : 1;
 
   const rawAmount =
     total / people;
@@ -998,10 +764,9 @@ function calculate() {
 
 
   /*
-   * 「そのまま」の場合
+   * 「そのまま」
    *
-   * 小数もそのまま表示するのではなく、
-   * 円単位で計算するため整数にしています。
+   * 1円単位で四捨五入
    */
 
   if (rounding === 1) {
@@ -1029,10 +794,8 @@ function calculate() {
   resultElement.textContent =
     formatNumber(amount);
 
-
   totalText.textContent =
     formatNumber(total) + "円";
-
 
   peopleText.textContent =
     people + "人";
@@ -1059,17 +822,17 @@ function calculate() {
 }
 
 
+/* 入力変更 */
+
 totalInput.addEventListener(
   "input",
   calculate
 );
 
-
 peopleInput.addEventListener(
   "input",
   calculate
 );
-
 
 roundingInputs.forEach(
   input => {
@@ -1099,19 +862,9 @@ resetButton.addEventListener(
       4;
 
 
-    /*
-     * ★ リセット時も
-     * 「そのまま」を強制選択
-     */
-
     document.getElementById(
       "r0"
     ).checked = true;
-
-
-    /*
-     * 念のため他の選択を解除
-     */
 
     document.getElementById(
       "r100"
@@ -1133,7 +886,7 @@ resetButton.addEventListener(
 
 
 /* ==================================================
-   コピー
+   結果コピー
 ================================================== */
 
 copyButton.addEventListener(
@@ -1159,8 +912,9 @@ copyButton.addEventListener(
 
     try {
 
-      await navigator.clipboard
-        .writeText(text);
+      await navigator.clipboard.writeText(
+        text
+      );
 
 
       copyButton.textContent =
@@ -1215,40 +969,13 @@ const ocrStatus =
     "ocrStatus"
   );
 
-const ocrResult =
-  document.getElementById(
-    "ocrResult"
-  );
-
-const ocrCandidates =
-  document.getElementById(
-    "ocrCandidates"
-  );
-
-const ocrSelectedAmount =
-  document.getElementById(
-    "ocrSelectedAmount"
-  );
-
-const ocrConfirm =
-  document.getElementById(
-    "ocrConfirm"
-  );
-
-const ocrCancel =
-  document.getElementById(
-    "ocrCancel"
-  );
-
-
 let ocrWorker =
   null;
 
-let selectedOCRAmount =
-  null;
 
-
-/* OCRステータス */
+/* ==================================================
+   OCRステータス表示
+================================================== */
 
 function showOCRStatus(
   message,
@@ -1265,7 +992,9 @@ function showOCRStatus(
 }
 
 
-/* OCRボタン */
+/* ==================================================
+   OCRボタン
+================================================== */
 
 ocrButton.addEventListener(
   "click",
@@ -1277,7 +1006,9 @@ ocrButton.addEventListener(
 );
 
 
-/* レシート選択 */
+/* ==================================================
+   レシート撮影・画像選択
+================================================== */
 
 receiptInput.addEventListener(
   "change",
@@ -1331,8 +1062,7 @@ receiptInput.addEventListener(
 
                     const percent =
                       Math.round(
-                        message.progress *
-                        100
+                        message.progress * 100
                       );
 
 
@@ -1373,27 +1103,67 @@ receiptInput.addEventListener(
       );
 
 
+      /*
+       * 合計金額候補を取得
+       */
+
       const candidates =
         findReceiptAmountCandidates(
           text
         );
 
 
+      /*
+       * 金額が見つからない
+       */
+
       if (
         candidates.length === 0
       ) {
 
         showOCRStatus(
-          "⚠ 合計金額を見つけられませんでした。写真を明るくして、もう一度試してください。",
+          "⚠ 合計金額を見つけられませんでした。レシート全体が写るように、もう一度撮影してください。",
           "error"
         );
 
         return;
+
       }
 
 
-      openOCRResult(
-        candidates
+      /*
+       * ★ 確認画面なし
+       *
+       * 一番可能性が高い候補を
+       * そのまま総額へ入力
+       */
+
+      const detectedAmount =
+        candidates[0];
+
+
+      totalInput.value =
+        detectedAmount;
+
+
+      /*
+       * 自動計算
+       */
+
+      calculate();
+
+
+      /*
+       * 完了表示
+       */
+
+      showOCRStatus(
+        "✓ 合計 " +
+        formatNumber(
+          detectedAmount
+        ) +
+        "円を自動入力しました",
+        "success"
       );
 
 
@@ -1406,7 +1176,7 @@ receiptInput.addEventListener(
 
 
       showOCRStatus(
-        "⚠ OCRでエラーが発生しました。画像を変えてもう一度試してください。",
+        "⚠ OCRでエラーが発生しました。レシートを明るく撮影して、もう一度試してください。",
         "error"
       );
 
@@ -1415,6 +1185,10 @@ receiptInput.addEventListener(
 
       ocrButton.disabled =
         false;
+
+      /*
+       * 同じ写真をもう一度選べるようにする
+       */
 
       receiptInput.value =
         "";
@@ -1425,189 +1199,8 @@ receiptInput.addEventListener(
 );
 
 
-/* OCR結果画面 */
-
-function openOCRResult(
-  candidates
-) {
-
-  selectedOCRAmount =
-    candidates[0];
-
-
-  ocrSelectedAmount.textContent =
-    formatNumber(
-      selectedOCRAmount
-    );
-
-
-  ocrCandidates.innerHTML =
-    "";
-
-
-  candidates.forEach(
-    (amount, index) => {
-
-      const button =
-        document.createElement(
-          "button"
-        );
-
-
-      button.type =
-        "button";
-
-
-      button.className =
-        "ocr-candidate";
-
-
-      if (
-        index === 0
-      ) {
-
-        button.classList.add(
-          "selected"
-        );
-
-      }
-
-
-      button.textContent =
-        formatNumber(
-          amount
-        ) +
-        "円";
-
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          selectedOCRAmount =
-            amount;
-
-
-          ocrSelectedAmount
-            .textContent =
-            formatNumber(
-              amount
-            );
-
-
-          document
-            .querySelectorAll(
-              ".ocr-candidate"
-            )
-            .forEach(
-              item => {
-
-                item.classList.remove(
-                  "selected"
-                );
-
-              }
-            );
-
-
-          button.classList.add(
-            "selected"
-          );
-
-        }
-      );
-
-
-      ocrCandidates.appendChild(
-        button
-      );
-
-    }
-  );
-
-
-  ocrResult.classList.add(
-    "show"
-  );
-
-}
-
-
-/* OCR結果を確定 */
-
-ocrConfirm.addEventListener(
-  "click",
-  () => {
-
-    if (
-      selectedOCRAmount === null
-    ) {
-      return;
-    }
-
-
-    totalInput.value =
-      selectedOCRAmount;
-
-
-    calculate();
-
-
-    ocrResult.classList.remove(
-      "show"
-    );
-
-
-    showOCRStatus(
-      "✓ 合計 " +
-      formatNumber(
-        selectedOCRAmount
-      ) +
-      "円を総額に入力しました",
-      "success"
-    );
-
-  }
-);
-
-
-/* OCR画面を閉じる */
-
-ocrCancel.addEventListener(
-  "click",
-  () => {
-
-    ocrResult.classList.remove(
-      "show"
-    );
-
-  }
-);
-
-
-/* 背景クリックで閉じる */
-
-ocrResult.addEventListener(
-  "click",
-  event => {
-
-    if (
-      event.target ===
-      ocrResult
-    ) {
-
-      ocrResult.classList.remove(
-        "show"
-      );
-
-    }
-
-  }
-);
-
-
 /* ==================================================
-   OCR金額候補
+   レシート金額候補を探す
 ================================================== */
 
 function findReceiptAmountCandidates(
@@ -1628,6 +1221,10 @@ function findReceiptAmountCandidates(
     [];
 
 
+  /*
+   * 合計金額として優先するキーワード
+   */
+
   const priorityKeywords = [
 
     "合計",
@@ -1636,17 +1233,48 @@ function findReceiptAmountCandidates(
     "お会計",
     "お支払",
     "お支払い",
+    "お買上",
+    "お買い上げ",
     "TOTAL",
     "Total",
     "total",
     "AMOUNT",
-    "Amount"
+    "Amount",
+    "amount"
 
   ];
 
 
   /*
-   * 合計などを含む行を優先
+   * 除外したいキーワード
+   *
+   * 小計・税・お釣りなどを
+   * 合計金額として誤認しにくくする
+   */
+
+  const excludeKeywords = [
+
+    "小計",
+    "税",
+    "消費税",
+    "内税",
+    "外税",
+    "お釣",
+    "おつり",
+    "釣銭",
+    "預り",
+    "お預り",
+    "現金",
+    "値引",
+    "割引",
+    "クーポン",
+    "ポイント"
+
+  ];
+
+
+  /*
+   * ① 合計系キーワードの行を最優先
    */
 
   for (
@@ -1656,13 +1284,26 @@ function findReceiptAmountCandidates(
     const isPriority =
       priorityKeywords.some(
         keyword =>
-          line.includes(
-            keyword
-          )
+          line.toLowerCase()
+            .includes(
+              keyword.toLowerCase()
+            )
       );
 
 
     if (!isPriority) {
+      continue;
+    }
+
+
+    const isExcluded =
+      excludeKeywords.some(
+        keyword =>
+          line.includes(keyword)
+      );
+
+
+    if (isExcluded) {
       continue;
     }
 
@@ -1683,6 +1324,7 @@ function findReceiptAmountCandidates(
         ) {
 
           candidates.push({
+
             amount:
               amount,
 
@@ -1700,7 +1342,7 @@ function findReceiptAmountCandidates(
 
 
   /*
-   * 通常の金額
+   * ② 「合計」のすぐ近くの行も確認
    */
 
   for (
@@ -1711,6 +1353,101 @@ function findReceiptAmountCandidates(
 
     const line =
       lines[i];
+
+
+    const isPriority =
+      priorityKeywords.some(
+        keyword =>
+          line.toLowerCase()
+            .includes(
+              keyword.toLowerCase()
+            )
+      );
+
+
+    if (!isPriority) {
+      continue;
+    }
+
+
+    for (
+      let offset = 1;
+      offset <= 2;
+      offset++
+    ) {
+
+      const nextLine =
+        lines[i + offset];
+
+
+      if (!nextLine) {
+        continue;
+      }
+
+
+      const amounts =
+        extractAllAmounts(
+          nextLine
+        );
+
+
+      amounts.forEach(
+        amount => {
+
+          if (
+            isReasonableReceiptAmount(
+              amount
+            )
+          ) {
+
+            candidates.push({
+
+              amount:
+                amount,
+
+              score:
+                80
+
+            });
+
+          }
+
+        }
+      );
+
+    }
+
+  }
+
+
+  /*
+   * ③ 通常の金額も候補にする
+   *
+   * レシートによっては
+   * 「合計」という文字を
+   * OCRが正しく読めないため
+   */
+
+  for (
+    let i = 0;
+    i < lines.length;
+    i++
+  ) {
+
+    const line =
+      lines[i];
+
+
+    const isExcluded =
+      excludeKeywords.some(
+        keyword =>
+          line.includes(keyword)
+      );
+
+
+    if (isExcluded) {
+      continue;
+    }
 
 
     const amounts =
@@ -1732,19 +1469,24 @@ function findReceiptAmountCandidates(
             10;
 
 
+          /*
+           * レシート下部の金額を
+           * 少し優先
+           */
+
           if (
             i >
-            lines.length *
-            0.55
+            lines.length * 0.55
           ) {
 
             score +=
-              15;
+              20;
 
           }
 
 
           candidates.push({
+
             amount:
               amount,
 
@@ -1797,6 +1539,9 @@ function findReceiptAmountCandidates(
 
   /*
    * スコア順
+   *
+   * 同点の場合は
+   * 大きい金額を優先
    */
 
   return Array.from(
@@ -1831,12 +1576,22 @@ function findReceiptAmountCandidates(
 
 
 /* ==================================================
-   金額抽出
+   金額を抽出
 ================================================== */
 
 function extractAllAmounts(
   line
 ) {
+
+  /*
+   * 例
+   *
+   * 1,280
+   * 1280
+   * ¥1,280
+   * ￥1,280
+   * 1,280円
+   */
 
   const matches =
     line.match(
@@ -1884,7 +1639,9 @@ function extractAllAmounts(
 }
 
 
-/* 金額チェック */
+/* ==================================================
+   金額として妥当か確認
+================================================== */
 
 function isReasonableReceiptAmount(
   amount
@@ -1900,7 +1657,7 @@ function isReasonableReceiptAmount(
 
 /* ==================================================
    初期状態
-   ★ ページを開いた時も必ず「そのまま」
+   ★ 常に「そのまま」
 ================================================== */
 
 document.getElementById(
