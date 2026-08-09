@@ -954,27 +954,31 @@ copyButton.addEventListener(
    レシートOCR
 ================================================== */
 
+/* ==================================================
+   レシートOCR 改良版
+   ・画像を拡大＋補正
+   ・通常画像 / 強調画像 / 白黒画像をOCR
+   ・合計系キーワードを強く評価
+   ・小計 / 税 / お釣り / 預り金などを除外
+   ・レシート下部の金額を優先
+   ・複数回OCRで一致した金額を加点
+   ・確認画面なしで自動入力
+================================================== */
+
 const receiptInput =
-  document.getElementById(
-    "receiptInput"
-  );
+  document.getElementById("receiptInput");
 
 const ocrButton =
-  document.getElementById(
-    "ocrButton"
-  );
+  document.getElementById("ocrButton");
 
 const ocrStatus =
-  document.getElementById(
-    "ocrStatus"
-  );
+  document.getElementById("ocrStatus");
 
-let ocrWorker =
-  null;
+let ocrWorker = null;
 
 
 /* ==================================================
-   OCRステータス表示
+   ステータス
 ================================================== */
 
 function showOCRStatus(
@@ -1007,7 +1011,7 @@ ocrButton.addEventListener(
 
 
 /* ==================================================
-   レシート撮影・画像選択
+   レシート撮影
 ================================================== */
 
 receiptInput.addEventListener(
@@ -1016,7 +1020,6 @@ receiptInput.addEventListener(
 
     const file =
       event.target.files[0];
-
 
     if (!file) {
       return;
@@ -1030,7 +1033,7 @@ receiptInput.addEventListener(
 
 
       showOCRStatus(
-        "📷 レシートを解析しています…"
+        "📷 レシート画像を準備しています…"
       );
 
 
@@ -1082,35 +1085,102 @@ receiptInput.addEventListener(
       }
 
 
-      showOCRStatus(
-        "🔍 レシートを読み取っています…"
-      );
+      /*
+       * レシート画像を
+       * 複数パターンに加工
+       */
 
-
-      const result =
-        await ocrWorker.recognize(
+      const variants =
+        await createReceiptImageVariants(
           file
         );
 
 
-      const text =
-        result.data.text;
+      const allResults =
+        [];
+
+
+      /*
+       * 画像ごとにOCR
+       */
+
+      for (
+        let i = 0;
+        i < variants.length;
+        i++
+      ) {
+
+        showOCRStatus(
+          "🔍 レシートを解析しています… " +
+          (i + 1) +
+          "/" +
+          variants.length
+        );
+
+
+        /*
+         * 通常画像は6
+         * 白黒画像は11
+         *
+         * 6 = 一般的なブロック
+         * 11 = 文字が散らばっているレシート向け
+         */
+
+        await ocrWorker.setParameters({
+
+          tessedit_pageseg_mode:
+            i === 0
+              ? "6"
+              : "11",
+
+          preserve_interword_spaces:
+            "1"
+
+        });
+
+
+        const result =
+          await ocrWorker.recognize(
+            variants[i]
+          );
+
+
+        allResults.push({
+
+          text:
+            result.data.text || "",
+
+          confidence:
+            Number(
+              result.data.confidence
+            ) || 0
+
+        });
+
+      }
 
 
       console.log(
-        "OCR全文:",
-        text
+        "OCR結果:",
+        allResults
       );
 
 
       /*
-       * 合計金額候補を取得
+       * 全OCR結果から
+       * 合計金額を判定
        */
 
       const candidates =
-        findReceiptAmountCandidates(
-          text
+        findBestReceiptAmounts(
+          allResults
         );
+
+
+      console.log(
+        "金額候補:",
+        candidates
+      );
 
 
       /*
@@ -1122,7 +1192,7 @@ receiptInput.addEventListener(
       ) {
 
         showOCRStatus(
-          "⚠ 合計金額を見つけられませんでした。レシート全体が写るように、もう一度撮影してください。",
+          "⚠ 合計金額を読み取れませんでした。レシート全体を明るく撮影して、もう一度試してください。",
           "error"
         );
 
@@ -1134,13 +1204,16 @@ receiptInput.addEventListener(
       /*
        * ★ 確認画面なし
        *
-       * 一番可能性が高い候補を
-       * そのまま総額へ入力
+       * 最有力候補を自動採用
        */
 
       const detectedAmount =
-        candidates[0];
+        candidates[0].amount;
 
+
+      /*
+       * 総額へ自動入力
+       */
 
       totalInput.value =
         detectedAmount;
@@ -1154,7 +1227,7 @@ receiptInput.addEventListener(
 
 
       /*
-       * 完了表示
+       * 完了
        */
 
       showOCRStatus(
@@ -1176,7 +1249,7 @@ receiptInput.addEventListener(
 
 
       showOCRStatus(
-        "⚠ OCRでエラーが発生しました。レシートを明るく撮影して、もう一度試してください。",
+        "⚠ OCRでエラーが発生しました。もう一度撮影してください。",
         "error"
       );
 
@@ -1186,8 +1259,10 @@ receiptInput.addEventListener(
       ocrButton.disabled =
         false;
 
+
       /*
-       * 同じ写真をもう一度選べるようにする
+       * 同じ画像をもう一度
+       * 選択できるようにする
        */
 
       receiptInput.value =
@@ -1200,402 +1275,1031 @@ receiptInput.addEventListener(
 
 
 /* ==================================================
-   レシート金額候補を探す
+   画像をOCR用に加工
 ================================================== */
 
-function findReceiptAmountCandidates(
-  text
+async function createReceiptImageVariants(
+  file
 ) {
 
-  const lines =
-    text
-      .split(/\r?\n/)
-      .map(
-        line =>
-          line.trim()
-      )
-      .filter(Boolean);
+  const image =
+    await loadImage(file);
 
+
+  /*
+   * 大きすぎる画像は1800px程度に縮小
+   * 小さい画像は拡大
+   */
+
+  const maxWidth =
+    1800;
+
+
+  const scale =
+    Math.min(
+      2,
+      maxWidth /
+        image.naturalWidth
+    );
+
+
+  const width =
+    Math.max(
+      900,
+      Math.round(
+        image.naturalWidth *
+        scale
+      )
+    );
+
+
+  const height =
+    Math.round(
+      image.naturalHeight *
+      (
+        width /
+        image.naturalWidth
+      )
+    );
+
+
+  /*
+   * 元画像
+   */
+
+  const source =
+    document.createElement(
+      "canvas"
+    );
+
+
+  source.width =
+    width;
+
+  source.height =
+    height;
+
+
+  const sourceContext =
+    source.getContext(
+      "2d",
+      {
+        willReadFrequently:
+          true
+      }
+    );
+
+
+  sourceContext.imageSmoothingEnabled =
+    true;
+
+  sourceContext.imageSmoothingQuality =
+    "high";
+
+
+  sourceContext.drawImage(
+    image,
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  /*
+   * ① 元画像を高解像度化
+   */
+
+  const original =
+    document.createElement(
+      "canvas"
+    );
+
+
+  original.width =
+    width;
+
+  original.height =
+    height;
+
+
+  original
+    .getContext("2d")
+    .drawImage(
+      source,
+      0,
+      0
+    );
+
+
+  /*
+   * ② グレースケール＋コントラスト強調
+   */
+
+  const enhanced =
+    document.createElement(
+      "canvas"
+    );
+
+
+  enhanced.width =
+    width;
+
+  enhanced.height =
+    height;
+
+
+  const enhancedContext =
+    enhanced.getContext(
+      "2d",
+      {
+        willReadFrequently:
+          true
+      }
+    );
+
+
+  enhancedContext.drawImage(
+    source,
+    0,
+    0
+  );
+
+
+  const imageData =
+    enhancedContext.getImageData(
+      0,
+      0,
+      width,
+      height
+    );
+
+
+  const data =
+    imageData.data;
+
+
+  for (
+    let i = 0;
+    i < data.length;
+    i += 4
+  ) {
+
+    const r =
+      data[i];
+
+    const g =
+      data[i + 1];
+
+    const b =
+      data[i + 2];
+
+
+    let gray =
+      0.299 * r +
+      0.587 * g +
+      0.114 * b;
+
+
+    /*
+     * コントラスト強調
+     */
+
+    gray =
+      (
+        (gray - 128) *
+        1.35
+      ) + 128;
+
+
+    gray =
+      Math.max(
+        0,
+        Math.min(
+          255,
+          gray
+        )
+      );
+
+
+    data[i] =
+      gray;
+
+    data[i + 1] =
+      gray;
+
+    data[i + 2] =
+      gray;
+
+  }
+
+
+  enhancedContext.putImageData(
+    imageData,
+    0,
+    0
+  );
+
+
+  /*
+   * ③ 白黒画像
+   */
+
+  const binary =
+    document.createElement(
+      "canvas"
+    );
+
+
+  binary.width =
+    width;
+
+  binary.height =
+    height;
+
+
+  const binaryContext =
+    binary.getContext(
+      "2d",
+      {
+        willReadFrequently:
+          true
+      }
+    );
+
+
+  binaryContext.drawImage(
+    enhanced,
+    0,
+    0
+  );
+
+
+  const binaryData =
+    binaryContext.getImageData(
+      0,
+      0,
+      width,
+      height
+    );
+
+
+  const pixels =
+    binaryData.data;
+
+
+  const threshold =
+    calculateOtsuThreshold(
+      pixels
+    );
+
+
+  for (
+    let i = 0;
+    i < pixels.length;
+    i += 4
+  ) {
+
+    const gray =
+      pixels[i];
+
+
+    const value =
+      gray > threshold
+        ? 255
+        : 0;
+
+
+    pixels[i] =
+      value;
+
+    pixels[i + 1] =
+      value;
+
+    pixels[i + 2] =
+      value;
+
+  }
+
+
+  binaryContext.putImageData(
+    binaryData,
+    0,
+    0
+  );
+
+
+  return [
+    original,
+    enhanced,
+    binary
+  ];
+
+}
+
+
+/* ==================================================
+   画像読み込み
+================================================== */
+
+function loadImage(
+  file
+) {
+
+  return new Promise(
+    (
+      resolve,
+      reject
+    ) => {
+
+      const url =
+        URL.createObjectURL(
+          file
+        );
+
+
+      const image =
+        new Image();
+
+
+      image.onload =
+        () => {
+
+          URL.revokeObjectURL(
+            url
+          );
+
+
+          resolve(
+            image
+          );
+
+        };
+
+
+      image.onerror =
+        () => {
+
+          URL.revokeObjectURL(
+            url
+          );
+
+
+          reject(
+            new Error(
+              "画像を読み込めませんでした"
+            )
+          );
+
+        };
+
+
+      image.src =
+        url;
+
+    }
+  );
+
+}
+
+
+/* ==================================================
+   白黒化の閾値を自動計算
+================================================== */
+
+function calculateOtsuThreshold(
+  data
+) {
+
+  const histogram =
+    new Array(256)
+      .fill(0);
+
+
+  let total =
+    0;
+
+  let sum =
+    0;
+
+
+  /*
+   * 全画素ではなく
+   * 一定間隔で計算
+   */
+
+  for (
+    let i = 0;
+    i < data.length;
+    i += 16
+  ) {
+
+    const value =
+      data[i];
+
+
+    histogram[value]++;
+
+    total++;
+
+    sum +=
+      value;
+
+  }
+
+
+  let sumBackground =
+    0;
+
+  let weightBackground =
+    0;
+
+  let maxVariance =
+    0;
+
+  let threshold =
+    180;
+
+
+  for (
+    let t = 0;
+    t < 256;
+    t++
+  ) {
+
+    weightBackground +=
+      histogram[t];
+
+
+    if (
+      weightBackground ===
+      0
+    ) {
+      continue;
+    }
+
+
+    const weightForeground =
+      total -
+      weightBackground;
+
+
+    if (
+      weightForeground ===
+      0
+    ) {
+      break;
+    }
+
+
+    sumBackground +=
+      t *
+      histogram[t];
+
+
+    const meanBackground =
+      sumBackground /
+      weightBackground;
+
+
+    const meanForeground =
+      (
+        sum -
+        sumBackground
+      ) /
+      weightForeground;
+
+
+    const variance =
+      weightBackground *
+      weightForeground *
+      Math.pow(
+        meanBackground -
+        meanForeground,
+        2
+      );
+
+
+    if (
+      variance >
+      maxVariance
+    ) {
+
+      maxVariance =
+        variance;
+
+      threshold =
+        t;
+
+    }
+
+  }
+
+
+  return Math.max(
+    120,
+    Math.min(
+      210,
+      threshold
+    )
+  );
+
+}
+
+
+/* ==================================================
+   合計金額を判定
+================================================== */
+
+function findBestReceiptAmounts(
+  results
+) {
 
   const candidates =
     [];
 
 
-  /*
-   * 合計金額として優先するキーワード
-   */
+  results.forEach(
+    (
+      result,
+      resultIndex
+    ) => {
 
-  const priorityKeywords = [
-
-    "合計",
-    "ご請求額",
-    "請求額",
-    "お会計",
-    "お支払",
-    "お支払い",
-    "お買上",
-    "お買い上げ",
-    "TOTAL",
-    "Total",
-    "total",
-    "AMOUNT",
-    "Amount",
-    "amount"
-
-  ];
-
-
-  /*
-   * 除外したいキーワード
-   *
-   * 小計・税・お釣りなどを
-   * 合計金額として誤認しにくくする
-   */
-
-  const excludeKeywords = [
-
-    "小計",
-    "税",
-    "消費税",
-    "内税",
-    "外税",
-    "お釣",
-    "おつり",
-    "釣銭",
-    "預り",
-    "お預り",
-    "現金",
-    "値引",
-    "割引",
-    "クーポン",
-    "ポイント"
-
-  ];
-
-
-  /*
-   * ① 合計系キーワードの行を最優先
-   */
-
-  for (
-    const line of lines
-  ) {
-
-    const isPriority =
-      priorityKeywords.some(
-        keyword =>
-          line.toLowerCase()
-            .includes(
-              keyword.toLowerCase()
-            )
-      );
-
-
-    if (!isPriority) {
-      continue;
-    }
-
-
-    const isExcluded =
-      excludeKeywords.some(
-        keyword =>
-          line.includes(keyword)
-      );
-
-
-    if (isExcluded) {
-      continue;
-    }
-
-
-    const amounts =
-      extractAllAmounts(
-        line
-      );
-
-
-    amounts.forEach(
-      amount => {
-
-        if (
-          isReasonableReceiptAmount(
-            amount
-          )
-        ) {
-
-          candidates.push({
-
-            amount:
-              amount,
-
-            score:
-              100
-
-          });
-
-        }
-
-      }
-    );
-
-  }
-
-
-  /*
-   * ② 「合計」のすぐ近くの行も確認
-   */
-
-  for (
-    let i = 0;
-    i < lines.length;
-    i++
-  ) {
-
-    const line =
-      lines[i];
-
-
-    const isPriority =
-      priorityKeywords.some(
-        keyword =>
-          line.toLowerCase()
-            .includes(
-              keyword.toLowerCase()
-            )
-      );
-
-
-    if (!isPriority) {
-      continue;
-    }
-
-
-    for (
-      let offset = 1;
-      offset <= 2;
-      offset++
-    ) {
-
-      const nextLine =
-        lines[i + offset];
-
-
-      if (!nextLine) {
-        continue;
-      }
-
-
-      const amounts =
-        extractAllAmounts(
-          nextLine
+      const normalizedText =
+        normalizeOCRText(
+          result.text
         );
 
 
-      amounts.forEach(
-        amount => {
+      const lines =
+        normalizedText
+          .split(/\r?\n/)
+          .map(
+            line =>
+              line.trim()
+          )
+          .filter(Boolean);
+
+
+      lines.forEach(
+        (
+          line,
+          lineIndex
+        ) => {
+
+          const amounts =
+            extractAmountsFromLine(
+              line
+            );
+
 
           if (
-            isReasonableReceiptAmount(
-              amount
-            )
+            amounts.length ===
+            0
           ) {
-
-            candidates.push({
-
-              amount:
-                amount,
-
-              score:
-                80
-
-            });
-
+            return;
           }
-
-        }
-      );
-
-    }
-
-  }
-
-
-  /*
-   * ③ 通常の金額も候補にする
-   *
-   * レシートによっては
-   * 「合計」という文字を
-   * OCRが正しく読めないため
-   */
-
-  for (
-    let i = 0;
-    i < lines.length;
-    i++
-  ) {
-
-    const line =
-      lines[i];
-
-
-    const isExcluded =
-      excludeKeywords.some(
-        keyword =>
-          line.includes(keyword)
-      );
-
-
-    if (isExcluded) {
-      continue;
-    }
-
-
-    const amounts =
-      extractAllAmounts(
-        line
-      );
-
-
-    amounts.forEach(
-      amount => {
-
-        if (
-          isReasonableReceiptAmount(
-            amount
-          )
-        ) {
-
-          let score =
-            10;
 
 
           /*
-           * レシート下部の金額を
-           * 少し優先
+           * 合計系キーワード
            */
 
-          if (
-            i >
-            lines.length * 0.55
-          ) {
+          const priority =
+            hasAnyKeyword(
+              line,
+              [
+                "合計",
+                "ご請求額",
+                "請求額",
+                "お会計",
+                "お支払",
+                "お支払い",
+                "お買上",
+                "お買い上げ",
+                "税込合計",
+                "TOTAL",
+                "AMOUNT",
+                "GRAND TOTAL",
+                "BALANCE DUE"
+              ]
+            );
 
-            score +=
-              20;
 
-          }
+          /*
+           * 除外キーワード
+           */
+
+          const negative =
+            hasAnyKeyword(
+              line,
+              [
+                "小計",
+                "税",
+                "消費税",
+                "内税",
+                "外税",
+                "お釣",
+                "おつり",
+                "釣銭",
+                "預り",
+                "お預り",
+                "現金",
+                "値引",
+                "割引",
+                "クーポン",
+                "ポイント",
+                "SUBTOTAL",
+                "CHANGE",
+                "CASH"
+              ]
+            );
 
 
-          candidates.push({
+          amounts.forEach(
+            amount => {
 
-            amount:
-              amount,
+              if (
+                !isReasonableReceiptAmount(
+                  amount
+                )
+              ) {
+                return;
+              }
 
-            score:
-              score
 
-          });
+              /*
+               * OCR自体の信頼度
+               */
+
+              let score =
+                result.confidence *
+                0.25;
+
+
+              /*
+               * 「合計」を強く評価
+               */
+
+              if (
+                priority
+              ) {
+
+                score +=
+                  100;
+
+              }
+
+
+              /*
+               * 小計・税などは
+               * 大幅減点
+               */
+
+              if (
+                negative
+              ) {
+
+                score -=
+                  90;
+
+              }
+
+
+              /*
+               * レシート下部を優先
+               */
+
+              const position =
+                lines.length <= 1
+                  ? 1
+                  : lineIndex /
+                    (
+                      lines.length -
+                      1
+                    );
+
+
+              score +=
+                position *
+                45;
+
+
+              /*
+               * 円記号があれば加点
+               */
+
+              if (
+                /[¥￥円]/.test(
+                  line
+                )
+              ) {
+
+                score +=
+                  10;
+
+              }
+
+
+              /*
+               * 金額らしい大きさ
+               */
+
+              if (
+                amount >=
+                1000
+              ) {
+
+                score +=
+                  8;
+
+              }
+
+
+              if (
+                amount >=
+                10000
+              ) {
+
+                score +=
+                  5;
+
+              }
+
+
+              /*
+               * 複数画像の結果を
+               * 後で統合する
+               */
+
+              score +=
+                Math.max(
+                  0,
+                  8 -
+                  resultIndex * 2
+                );
+
+
+              candidates.push({
+
+                amount:
+                  amount,
+
+                score:
+                  score,
+
+                line:
+                  line,
+
+                resultIndex:
+                  resultIndex
+
+              });
+
+            }
+          );
 
         }
-
-      }
-    );
-
-  }
-
-
-  /*
-   * 重複削除
-   */
-
-  const unique =
-    new Map();
-
-
-  candidates.forEach(
-    item => {
-
-      const current =
-        unique.get(
-          item.amount
-        );
-
-
-      if (
-        !current ||
-        item.score >
-        current.score
-      ) {
-
-        unique.set(
-          item.amount,
-          item
-        );
-
-      }
+      );
 
     }
   );
 
 
   /*
-   * スコア順
-   *
-   * 同点の場合は
-   * 大きい金額を優先
+   * 同じ金額をまとめる
+   */
+
+  const grouped =
+    new Map();
+
+
+  candidates.forEach(
+    candidate => {
+
+      const current =
+        grouped.get(
+          candidate.amount
+        );
+
+
+      if (
+        !current
+      ) {
+
+        grouped.set(
+          candidate.amount,
+          {
+            amount:
+              candidate.amount,
+
+            score:
+              candidate.score,
+
+            hits:
+              1,
+
+            lines:
+              [
+                candidate.line
+              ]
+
+          }
+        );
+
+
+        return;
+
+      }
+
+
+      /*
+       * 複数回OCRで
+       * 同じ金額が出たら加点
+       */
+
+      current.hits++;
+
+
+      current.score +=
+        candidate.score *
+        0.35;
+
+
+      current.lines.push(
+        candidate.line
+      );
+
+    }
+  );
+
+
+  /*
+   * 一致回数を加点
    */
 
   return Array.from(
-    unique.values()
+    grouped.values()
   )
+
+    .map(
+      item => ({
+
+        ...item,
+
+        score:
+          item.score +
+          Math.min(
+            item.hits * 12,
+            36
+          )
+
+      })
+    )
+
     .sort(
-      (a, b) => {
+      (
+        a,
+        b
+      ) => {
 
         if (
           b.score !==
           a.score
         ) {
 
-          return b.score -
-            a.score;
+          return (
+            b.score -
+            a.score
+          );
 
         }
 
 
-        return b.amount -
-          a.amount;
+        return (
+          b.amount -
+          a.amount
+        );
 
       }
     )
-    .map(
-      item =>
-        item.amount
-    )
-    .slice(0, 6);
+
+    .slice(
+      0,
+      8
+    );
 
 }
 
 
 /* ==================================================
-   金額を抽出
+   OCR文字の正規化
 ================================================== */
 
-function extractAllAmounts(
+function normalizeOCRText(
+  text
+) {
+
+  return String(
+    text || ""
+  )
+
+    .normalize(
+      "NFKC"
+    )
+
+    .replace(
+      /[\u3000]/g,
+      " "
+    )
+
+    .replace(
+      /合\s*計/g,
+      "合計"
+    )
+
+    .replace(
+      /お\s*支\s*払/g,
+      "お支払"
+    )
+
+    .replace(
+      /小\s*計/g,
+      "小計"
+    )
+
+    .replace(
+      /T\s*O\s*T\s*A\s*L/gi,
+      "TOTAL"
+    );
+
+}
+
+
+/* ==================================================
+   キーワード検索
+================================================== */
+
+function hasAnyKeyword(
+  text,
+  keywords
+) {
+
+  return keywords.some(
+    keyword =>
+      text
+        .toLowerCase()
+        .includes(
+          keyword.toLowerCase()
+        )
+  );
+
+}
+
+
+/* ==================================================
+   金額抽出
+================================================== */
+
+function extractAmountsFromLine(
   line
 ) {
 
   /*
-   * 例
-   *
-   * 1,280
-   * 1280
-   * ¥1,280
-   * ￥1,280
-   * 1,280円
+   * OCRで間違いやすい
+   * O / o → 0
+   * I / l / | → 1
+   * S → 5
+   * B → 8
    */
 
+  const normalized =
+    line
+
+      .replace(
+        /[Oo]/g,
+        "0"
+      )
+
+      .replace(
+        /[Il|]/g,
+        "1"
+      )
+
+      .replace(
+        /[Ｓｓ]/g,
+        "5"
+      )
+
+      .replace(
+        /[Ｂｂ]/g,
+        "8"
+      );
+
+
   const matches =
-    line.match(
-      /(?:¥|￥)?\s*(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,7})\s*(?:円)?/g
+    normalized.match(
+      /(?:[¥￥]\s*)?(?:\d{1,3}(?:[,.]\d{3})+|\d{1,3}(?:\s\d{3})+|\d{3,7})\s*(?:円|¥|￥)?/g
     );
 
 
@@ -1611,36 +2315,27 @@ function extractAllAmounts(
 
         const cleaned =
           value.replace(
-            /[¥￥円,\s]/g,
+            /[^0-9]/g,
             ""
           );
 
 
-        const number =
-          Number(
-            cleaned
-          );
-
-
-        return Number.isFinite(
-          number
-        )
-          ? number
-          : null;
+        return Number(
+          cleaned
+        );
 
       }
     )
 
     .filter(
-      value =>
-        value !== null
+      Number.isFinite
     );
 
 }
 
 
 /* ==================================================
-   金額として妥当か確認
+   金額チェック
 ================================================== */
 
 function isReasonableReceiptAmount(
@@ -1648,7 +2343,7 @@ function isReasonableReceiptAmount(
 ) {
 
   return (
-    amount >= 10 &&
+    amount >= 100 &&
     amount <= 1000000
   );
 
