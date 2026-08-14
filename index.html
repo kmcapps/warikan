@@ -307,6 +307,177 @@ input[type="number"]:focus {
   font-weight: 700;
 }
 
+/* レシート画像付き共有 */
+
+.share {
+  width: 100%;
+  margin-top: 18px;
+  background: linear-gradient(135deg, #0ea5e9, #4f46e5);
+  color: white;
+  box-shadow: 0 10px 22px rgba(79,70,229,.18);
+}
+
+.share:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  transform: none;
+}
+
+.sheet,
+.image-lightbox {
+  display: none;
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+}
+
+.sheet {
+  align-items: center;
+  justify-content: center;
+  background: rgba(15,23,42,.58);
+}
+
+.sheet.show,
+.image-lightbox.show {
+  display: flex;
+}
+
+.sheet-body {
+  width: min(560px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 25px 22px 27px;
+  border-radius: 24px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 -8px 28px rgba(0,0,0,.16);
+}
+
+.sheet-body h2 {
+  margin: 0 0 14px;
+  color: #0f172a;
+  font-size: 21px;
+  text-align: center;
+}
+
+.receipt-preview {
+  display: block;
+  width: 132px;
+  height: auto;
+  max-height: 22vh;
+  margin: 0 auto 14px;
+  padding: 0;
+  overflow: hidden;
+  appearance: none;
+  border: 1px solid #d8d1c5;
+  border-radius: 5px;
+  background: #fffdf9;
+  box-shadow: 0 4px 10px rgba(48,44,37,.15);
+  cursor: zoom-in;
+}
+
+.receipt-preview[hidden] {
+  display: none;
+}
+
+.receipt-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.share-summary {
+  padding: 14px 16px;
+  border-radius: 13px;
+  background: #f6faff;
+  color: #344c65;
+  line-height: 1.85;
+  text-align: center;
+}
+
+.per-person {
+  margin-bottom: 9px;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.per-person strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 27px;
+  line-height: 1.15;
+}
+
+.share-details {
+  color: #52677e;
+  font-size: 14px;
+}
+
+.share-notice {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: #fff5df;
+  color: #875800;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.close-sheet,
+.open-share {
+  flex: 1;
+}
+
+.close-sheet {
+  background: #eef2f6;
+  color: #40556c;
+}
+
+.open-share {
+  background: #0ea5e9;
+  color: white;
+}
+
+.share-action-status {
+  min-height: 1.4em;
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+}
+
+.image-lightbox {
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: rgba(8,20,34,.82);
+}
+
+.image-lightbox img {
+  max-width: 88vw;
+  max-height: 78vh;
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  height: auto;
+  min-height: 44px;
+  padding: 0 15px;
+  border-radius: 11px;
+  background: white;
+  color: #1d354d;
+}
+
 /* ボタン */
 
 .buttons {
@@ -425,6 +596,10 @@ footer {
 
   .buttons {
     margin-top: 15px;
+  }
+
+  .sheet-body {
+    padding: 22px 16px 24px;
   }
 }
 </style>
@@ -676,9 +851,114 @@ footer {
         集金合計 10,000円
       </div>
 
+      <!-- OCRに成功したレシート画像と計算結果を共有する -->
+      <button
+        class="share"
+        id="shareButton"
+        type="button"
+        disabled
+      >
+        ↗ レシート画像付きで共有
+      </button>
+
     </section>
 
   </main>
+
+
+  <!-- 共有前の確認画面 -->
+  <section
+    class="sheet"
+    id="shareSheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="shareSheetTitle"
+  >
+    <div class="sheet-body">
+
+      <h2 id="shareSheetTitle">
+        共有する内容
+      </h2>
+
+      <!-- OCRで使用した元のレシート画像を縮小表示する -->
+      <button
+        class="receipt-preview"
+        id="receiptPreviewButton"
+        type="button"
+        aria-label="レシート画像を拡大して確認"
+        hidden
+      >
+        <img
+          id="receiptPreviewImage"
+          alt="レシート画像のプレビュー"
+        >
+      </button>
+
+      <div class="share-summary">
+        <div class="per-person">
+          1人あたり
+          <strong id="shareAmount"></strong>
+        </div>
+
+        <div class="share-details">
+          合計金額：<span id="shareTotal"></span><br>
+          人数：<span id="sharePeople"></span>
+        </div>
+      </div>
+
+      <div class="share-notice">
+        レシート画像には店名・日時などが写る場合があります。内容を確認してから共有してください。
+      </div>
+
+      <div class="sheet-actions">
+        <button
+          class="close-sheet"
+          id="closeSheetButton"
+          type="button"
+        >
+          閉じる
+        </button>
+
+        <button
+          class="open-share"
+          id="openShareButton"
+          type="button"
+        >
+          共有先を開く
+        </button>
+      </div>
+
+      <p
+        class="share-action-status"
+        id="shareActionStatus"
+        aria-live="polite"
+      ></p>
+
+    </div>
+  </section>
+
+
+  <!-- レシート画像を大きく確認する画面 -->
+  <section
+    class="image-lightbox"
+    id="imageLightbox"
+    role="dialog"
+    aria-modal="true"
+    aria-label="レシート画像の拡大表示"
+  >
+    <button
+      class="lightbox-close"
+      id="lightboxClose"
+      type="button"
+    >
+      閉じる
+    </button>
+
+    <img
+      id="receiptLargeImage"
+      alt="レシート画像の拡大表示"
+    >
+  </section>
 
 
   <footer>
@@ -720,6 +1000,49 @@ const resetButton =
 
 const copyButton =
   document.getElementById("copyButton");
+
+const shareButton =
+  document.getElementById("shareButton");
+
+const shareSheet =
+  document.getElementById("shareSheet");
+
+const receiptPreviewButton =
+  document.getElementById("receiptPreviewButton");
+
+const receiptPreviewImage =
+  document.getElementById("receiptPreviewImage");
+
+const shareAmount =
+  document.getElementById("shareAmount");
+
+const shareTotal =
+  document.getElementById("shareTotal");
+
+const sharePeople =
+  document.getElementById("sharePeople");
+
+const closeSheetButton =
+  document.getElementById("closeSheetButton");
+
+const openShareButton =
+  document.getElementById("openShareButton");
+
+const shareActionStatus =
+  document.getElementById("shareActionStatus");
+
+const imageLightbox =
+  document.getElementById("imageLightbox");
+
+const receiptLargeImage =
+  document.getElementById("receiptLargeImage");
+
+const lightboxClose =
+  document.getElementById("lightboxClose");
+
+/* OCRに成功した元画像を、このページを開いている間だけ保持する */
+let receiptFileForShare = null;
+let receiptImageUrl = null;
 
 const roundingInputs =
   document.querySelectorAll(
@@ -886,6 +1209,8 @@ resetButton.addEventListener(
     ).checked = false;
 
 
+    clearReceiptForShare();
+
     calculate();
 
   }
@@ -950,6 +1275,214 @@ copyButton.addEventListener(
     } catch (error) {
 
       alert(text);
+
+    }
+
+  }
+);
+
+
+/* ==================================================
+   レシート画像付き共有
+================================================== */
+
+function createShareText() {
+
+  const total =
+    Number(totalInput.value) || 0;
+
+  const people =
+    Number(peopleInput.value) || 1;
+
+  const amount =
+    resultElement.textContent;
+
+
+  return (
+    "割り勘結果\n" +
+    `合計金額：${formatNumber(total)}円\n` +
+    `人数：${people}人\n` +
+    `1人あたり：${amount}円`
+  );
+
+}
+
+
+function clearReceiptForShare() {
+
+  receiptFileForShare = null;
+  shareButton.disabled = true;
+  receiptPreviewButton.hidden = true;
+  receiptPreviewImage.removeAttribute("src");
+  receiptLargeImage.removeAttribute("src");
+  shareSheet.classList.remove("show");
+  imageLightbox.classList.remove("show");
+  shareActionStatus.textContent = "";
+
+
+  if (receiptImageUrl) {
+
+    URL.revokeObjectURL(
+      receiptImageUrl
+    );
+
+    receiptImageUrl = null;
+
+  }
+
+}
+
+
+function setReceiptForShare(file) {
+
+  clearReceiptForShare();
+
+  receiptFileForShare = file;
+  receiptImageUrl =
+    URL.createObjectURL(file);
+
+  receiptPreviewImage.src =
+    receiptImageUrl;
+
+  receiptLargeImage.src =
+    receiptImageUrl;
+
+  receiptPreviewButton.hidden = false;
+  shareButton.disabled = false;
+
+}
+
+
+function showShareSheet() {
+
+  if (!receiptFileForShare) {
+    return;
+  }
+
+
+  const total =
+    Number(totalInput.value) || 0;
+
+  const people =
+    Number(peopleInput.value) || 1;
+
+
+  shareAmount.textContent =
+    resultElement.textContent + "円";
+
+  shareTotal.textContent =
+    formatNumber(total) + "円";
+
+  sharePeople.textContent =
+    people + "人";
+
+  shareActionStatus.textContent = "";
+  shareSheet.classList.add("show");
+
+}
+
+
+function closeShareSheet() {
+
+  shareSheet.classList.remove("show");
+  imageLightbox.classList.remove("show");
+
+}
+
+
+shareButton.addEventListener(
+  "click",
+  showShareSheet
+);
+
+
+closeSheetButton.addEventListener(
+  "click",
+  closeShareSheet
+);
+
+
+/* 背景だけをタップした場合に閉じる。確認画面本体のタップでは閉じない。 */
+shareSheet.addEventListener(
+  "click",
+  event => {
+
+    if (event.target === shareSheet) {
+      closeShareSheet();
+    }
+
+  }
+);
+
+
+receiptPreviewButton.addEventListener(
+  "click",
+  () => {
+    imageLightbox.classList.add("show");
+  }
+);
+
+
+lightboxClose.addEventListener(
+  "click",
+  () => {
+    imageLightbox.classList.remove("show");
+  }
+);
+
+
+/* 背景だけをタップした場合に閉じる。画像本体のタップでは閉じない。 */
+imageLightbox.addEventListener(
+  "click",
+  event => {
+
+    if (event.target === imageLightbox) {
+      imageLightbox.classList.remove("show");
+    }
+
+  }
+);
+
+
+openShareButton.addEventListener(
+  "click",
+  async () => {
+
+    if (!receiptFileForShare) {
+      return;
+    }
+
+
+    const shareData = {
+      title: "WARICAN 割り勘結果",
+      text: createShareText(),
+      files: [receiptFileForShare]
+    };
+
+
+    if (
+      !navigator.share ||
+      !navigator.canShare ||
+      !navigator.canShare(shareData)
+    ) {
+
+      shareActionStatus.textContent =
+        "このブラウザーでは画像付き共有に対応していません。";
+
+      return;
+
+    }
+
+
+    try {
+
+      await navigator.share(shareData);
+
+    } catch (error) {
+
+      /* 共有先の選択を取り消した場合も、確認画面は閉じない */
+      shareActionStatus.textContent =
+        "共有はキャンセルされました。";
 
     }
 
@@ -1031,6 +1564,10 @@ receiptInput.addEventListener(
     if (!file) {
       return;
     }
+
+
+    /* OCRに失敗した場合に古いレシートを共有しないよう、先に共有状態を解除する */
+    clearReceiptForShare();
 
 
     try {
@@ -1231,6 +1768,10 @@ receiptInput.addEventListener(
        */
 
       calculate();
+
+
+      /* OCRに使った元画像を、共有時だけ使えるよう一時保持する */
+      setReceiptForShare(file);
 
 
       /*
