@@ -362,16 +362,16 @@ input[type="number"]:focus {
 
 .receipt-preview {
   display: block;
-  width: 132px;
+  width: min(320px, 86vw);
   height: auto;
-  max-height: 22vh;
+  max-height: 30vh;
   margin: 0 auto 14px;
   padding: 0;
   overflow: hidden;
   appearance: none;
-  border: 1px solid #d8d1c5;
-  border-radius: 5px;
-  background: #fffdf9;
+  border: 1px solid #dbe8f3;
+  border-radius: 14px;
+  background: #fff;
   box-shadow: 0 4px 10px rgba(48,44,37,.15);
   cursor: zoom-in;
 }
@@ -885,12 +885,12 @@ footer {
         class="receipt-preview"
         id="receiptPreviewButton"
         type="button"
-        aria-label="レシート画像を拡大して確認"
+        aria-label="共有画像を拡大して確認"
         hidden
       >
         <img
           id="receiptPreviewImage"
-          alt="レシート画像のプレビュー"
+          alt="共有画像のプレビュー"
         >
       </button>
 
@@ -944,7 +944,7 @@ footer {
     id="imageLightbox"
     role="dialog"
     aria-modal="true"
-    aria-label="レシート画像の拡大表示"
+    aria-label="共有画像の拡大表示"
   >
     <button
       class="lightbox-close"
@@ -956,7 +956,7 @@ footer {
 
     <img
       id="receiptLargeImage"
-      alt="レシート画像の拡大表示"
+      alt="共有画像の拡大表示"
     >
   </section>
 
@@ -1042,7 +1042,8 @@ const lightboxClose =
 
 /* OCRに成功した元画像を、このページを開いている間だけ保持する */
 let receiptFileForShare = null;
-let receiptImageUrl = null;
+let shareImageFile = null;
+let shareImageUrl = null;
 
 const roundingInputs =
   document.querySelectorAll(
@@ -1286,31 +1287,10 @@ copyButton.addEventListener(
    レシート画像付き共有
 ================================================== */
 
-function createShareText() {
-
-  const total =
-    Number(totalInput.value) || 0;
-
-  const people =
-    Number(peopleInput.value) || 1;
-
-  const amount =
-    resultElement.textContent;
-
-
-  return (
-    "割り勘結果\n" +
-    `合計金額：${formatNumber(total)}円\n` +
-    `人数：${people}人\n` +
-    `1人あたり：${amount}円`
-  );
-
-}
-
-
 function clearReceiptForShare() {
 
   receiptFileForShare = null;
+  shareImageFile = null;
   shareButton.disabled = true;
   receiptPreviewButton.hidden = true;
   receiptPreviewImage.removeAttribute("src");
@@ -1320,13 +1300,13 @@ function clearReceiptForShare() {
   shareActionStatus.textContent = "";
 
 
-  if (receiptImageUrl) {
+  if (shareImageUrl) {
 
     URL.revokeObjectURL(
-      receiptImageUrl
+      shareImageUrl
     );
 
-    receiptImageUrl = null;
+    shareImageUrl = null;
 
   }
 
@@ -1338,22 +1318,213 @@ function setReceiptForShare(file) {
   clearReceiptForShare();
 
   receiptFileForShare = file;
-  receiptImageUrl =
-    URL.createObjectURL(file);
-
-  receiptPreviewImage.src =
-    receiptImageUrl;
-
-  receiptLargeImage.src =
-    receiptImageUrl;
-
-  receiptPreviewButton.hidden = false;
   shareButton.disabled = false;
 
 }
 
 
-function showShareSheet() {
+function loadReceiptImage(file) {
+
+  return new Promise((resolve, reject) => {
+
+    const sourceUrl =
+      URL.createObjectURL(file);
+
+    const image =
+      new Image();
+
+
+    image.onload = () => {
+
+      resolve({ image, sourceUrl });
+
+    };
+
+
+    image.onerror = () => {
+
+      URL.revokeObjectURL(sourceUrl);
+      reject(
+        new Error("レシート画像を読み込めませんでした。")
+      );
+
+    };
+
+
+    image.src = sourceUrl;
+
+  });
+
+}
+
+
+function drawRoundedRect(context, x, y, width, height, radius) {
+
+  const rounded =
+    Math.min(radius, width / 2, height / 2);
+
+
+  context.beginPath();
+  context.moveTo(x + rounded, y);
+  context.arcTo(x + width, y, x + width, y + height, rounded);
+  context.arcTo(x + width, y + height, x, y + height, rounded);
+  context.arcTo(x, y + height, x, y, rounded);
+  context.arcTo(x, y, x + width, y, rounded);
+  context.closePath();
+
+}
+
+
+async function createShareImageFile() {
+
+  const { image, sourceUrl } =
+    await loadReceiptImage(receiptFileForShare);
+
+
+  try {
+
+    const width = 1080;
+    const padding = 52;
+    const receiptMaxWidth = width - padding * 2 - 44;
+    const receiptMaxHeight = 980;
+    const receiptScale = Math.min(
+      receiptMaxWidth / image.naturalWidth,
+      receiptMaxHeight / image.naturalHeight,
+      1
+    );
+    const receiptWidth =
+      Math.round(image.naturalWidth * receiptScale);
+    const receiptHeight =
+      Math.round(image.naturalHeight * receiptScale);
+    const receiptBoxHeight =
+      receiptHeight + 52;
+    const height =
+      180 + 310 + 98 + 54 + receiptBoxHeight + 92;
+    const canvas =
+      document.createElement("canvas");
+
+
+    canvas.width = width;
+    canvas.height = height;
+
+
+    const context =
+      canvas.getContext("2d");
+
+    const total =
+      Number(totalInput.value) || 0;
+    const people =
+      Number(peopleInput.value) || 1;
+    const amount =
+      resultElement.textContent;
+
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+
+    const headerGradient =
+      context.createLinearGradient(0, 0, width, 180);
+
+    headerGradient.addColorStop(0, "#0ea5e9");
+    headerGradient.addColorStop(1, "#4f46e5");
+    context.fillStyle = headerGradient;
+    context.fillRect(0, 0, width, 180);
+
+    context.fillStyle = "#ffffff";
+    context.font = "800 38px sans-serif";
+    context.textAlign = "center";
+    context.fillText("WARICAN", width / 2, 105);
+
+    drawRoundedRect(context, padding, 220, width - padding * 2, 270, 32);
+    context.fillStyle = "#effaff";
+    context.fill();
+
+    context.fillStyle = "#0f355d";
+    context.font = "700 34px sans-serif";
+    context.fillText("1人あたり", width / 2, 292);
+    context.font = "800 112px sans-serif";
+    context.fillText(`${amount}円`, width / 2, 418);
+
+    context.fillStyle = "#3c5772";
+    context.font = "700 34px sans-serif";
+    context.fillText(
+      `合計 ${formatNumber(total)}円 ／ ${people}人`,
+      width / 2,
+      560
+    );
+
+    context.fillStyle = "#52677e";
+    context.font = "700 28px sans-serif";
+    context.fillText("レシート", width / 2, 624);
+
+    const receiptBoxY = 654;
+    const receiptBoxX = padding;
+    const receiptBoxWidth = width - padding * 2;
+
+    drawRoundedRect(
+      context,
+      receiptBoxX,
+      receiptBoxY,
+      receiptBoxWidth,
+      receiptBoxHeight,
+      26
+    );
+    context.fillStyle = "#f4f8fc";
+    context.fill();
+
+    const receiptX =
+      (width - receiptWidth) / 2;
+    const receiptY =
+      receiptBoxY + 26;
+
+    context.drawImage(
+      image,
+      receiptX,
+      receiptY,
+      receiptWidth,
+      receiptHeight
+    );
+
+    context.fillStyle = "#7a5b15";
+    context.font = "500 22px sans-serif";
+    context.fillText(
+      "レシートには店名・日時などが写る場合があります。",
+      width / 2,
+      height - 34
+    );
+
+
+    const blob =
+      await new Promise(resolve => {
+
+        canvas.toBlob(resolve, "image/png");
+
+      });
+
+
+    if (!blob) {
+
+      throw new Error("共有画像を作成できませんでした。");
+
+    }
+
+
+    return new File(
+      [blob],
+      "warican-share.png",
+      { type: "image/png" }
+    );
+
+  } finally {
+
+    URL.revokeObjectURL(sourceUrl);
+
+  }
+
+}
+
+
+async function showShareSheet() {
 
   if (!receiptFileForShare) {
     return;
@@ -1376,8 +1547,42 @@ function showShareSheet() {
   sharePeople.textContent =
     people + "人";
 
-  shareActionStatus.textContent = "";
   shareSheet.classList.add("show");
+  receiptPreviewButton.hidden = true;
+  openShareButton.disabled = true;
+  shareActionStatus.textContent =
+    "共有画像を作成しています…";
+
+
+  try {
+
+    if (shareImageUrl) {
+
+      URL.revokeObjectURL(shareImageUrl);
+
+    }
+
+
+    shareImageFile =
+      await createShareImageFile();
+    shareImageUrl =
+      URL.createObjectURL(shareImageFile);
+
+    receiptPreviewImage.src =
+      shareImageUrl;
+    receiptLargeImage.src =
+      shareImageUrl;
+    receiptPreviewButton.hidden = false;
+    openShareButton.disabled = false;
+    shareActionStatus.textContent = "";
+
+  } catch (error) {
+
+    shareImageFile = null;
+    shareActionStatus.textContent =
+      "共有画像を作成できませんでした。";
+
+  }
 
 }
 
@@ -1448,15 +1653,13 @@ openShareButton.addEventListener(
   "click",
   async () => {
 
-    if (!receiptFileForShare) {
+    if (!shareImageFile) {
       return;
     }
 
 
     const shareData = {
-      title: "WARICAN 割り勘結果",
-      text: createShareText(),
-      files: [receiptFileForShare]
+      files: [shareImageFile]
     };
 
 
