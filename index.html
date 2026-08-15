@@ -123,7 +123,7 @@ header {
   position: relative;
 }
 
-input[type="number"] {
+.integer-input {
   width: 100%;
   height: 68px;
   border: 1px solid rgba(255,255,255,.1);
@@ -137,7 +137,7 @@ input[type="number"] {
   transition: .2s;
 }
 
-input[type="number"]:focus {
+.integer-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px rgba(56,189,248,.12);
 }
@@ -618,11 +618,11 @@ footer {
 
           <input
             id="total"
-            type="number"
+            class="integer-input"
+            type="text"
             inputmode="numeric"
-            min="0"
-            step="100"
-            value="10000"
+            pattern="[0-9]*"
+            value="0"
           >
 
           <span class="unit">
@@ -669,11 +669,11 @@ footer {
 
           <input
             id="people"
-            type="number"
+            class="integer-input"
+            type="text"
             inputmode="numeric"
-            min="1"
-            step="1"
-            value="4"
+            pattern="[0-9]*"
+            value="2"
           >
 
           <span class="unit">
@@ -1104,17 +1104,92 @@ function calculate() {
 }
 
 
-/* 入力変更 */
+/* ==================================================
+   整数入力の検査
+   ・キーボード入力と貼り付けを数字だけに制限
+   ・人数は入力途中だけ空欄を許可
+================================================== */
 
-totalInput.addEventListener(
-  "input",
-  calculate
-);
+function blockNonDigitInput(event) {
 
-peopleInput.addEventListener(
-  "input",
-  calculate
-);
+  if (
+    event.inputType &&
+    event.inputType.startsWith("delete")
+  ) {
+    return;
+  }
+
+  if (
+    typeof event.data === "string" &&
+    !/^\d+$/.test(event.data)
+  ) {
+    event.preventDefault();
+  }
+
+}
+
+
+function sanitizeIntegerInput(input, minimum) {
+
+  if (!/^\d*$/.test(input.value)) {
+    input.value = "";
+    return;
+  }
+
+  if (
+    minimum === 1 &&
+    input.value !== ""
+  ) {
+    input.value =
+      input.value.replace(/^0+/, "");
+  }
+
+}
+
+
+function validateInputsForAction() {
+
+  if (!/^[1-9]\d*$/.test(totalInput.value)) {
+    alert(
+      "合計金額を1円以上の整数で入力してください。"
+    );
+    totalInput.focus();
+    return false;
+  }
+
+  if (!/^[1-9]\d*$/.test(peopleInput.value)) {
+    alert(
+      "人数を1人以上の整数で入力してください。"
+    );
+    peopleInput.focus();
+    return false;
+  }
+
+  return true;
+
+}
+
+
+function addIntegerInputValidation(input, minimum) {
+
+  input.addEventListener(
+    "beforeinput",
+    blockNonDigitInput
+  );
+
+  input.addEventListener(
+    "input",
+    () => {
+      sanitizeIntegerInput(input, minimum);
+      calculate();
+    }
+  );
+
+}
+
+
+addIntegerInputValidation(totalInput, 0);
+addIntegerInputValidation(peopleInput, 1);
 
 roundingInputs.forEach(
   input => {
@@ -1138,10 +1213,10 @@ resetButton.addEventListener(
   () => {
 
     totalInput.value =
-      10000;
+      0;
 
     peopleInput.value =
-      4;
+      2;
 
 
     document.getElementById(
@@ -1176,6 +1251,10 @@ resetButton.addEventListener(
 copyButton.addEventListener(
   "click",
   async () => {
+
+    if (!validateInputsForAction()) {
+      return;
+    }
 
     const total =
       Number(totalInput.value) || 0;
@@ -1477,6 +1556,10 @@ async function createShareImageFile() {
 
 async function showShareSheet() {
 
+  if (!validateInputsForAction()) {
+    return;
+  }
+
   if (!receiptFileForShare) {
     return;
   }
@@ -1587,6 +1670,10 @@ imageLightbox.addEventListener(
 openShareButton.addEventListener(
   "click",
   async () => {
+
+    if (!validateInputsForAction()) {
+      return;
+    }
 
     if (!shareImageFile) {
       return;
