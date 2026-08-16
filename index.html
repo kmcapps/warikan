@@ -11,8 +11,6 @@
 <link rel="icon" type="image/png" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/tesseract.min.js"></script>
-
 <style>
 * {
   box-sizing: border-box;
@@ -152,13 +150,13 @@ header {
   font-weight: 800;
 }
 
-/* OCR */
+/* レシート画像添付 */
 
 #receiptInput {
   display: none;
 }
 
-.ocr-button {
+.receipt-add-button {
   width: 100%;
   height: 56px;
   margin-top: -5px;
@@ -174,21 +172,15 @@ header {
   transition: .2s;
 }
 
-.ocr-button:hover {
+.receipt-add-button:hover {
   transform: translateY(-1px);
 }
 
-.ocr-button:active {
+.receipt-add-button:active {
   transform: scale(.98);
 }
 
-.ocr-button:disabled {
-  opacity: .55;
-  cursor: wait;
-  transform: none;
-}
-
-.ocr-status {
+.receipt-selection-status {
   display: none;
   margin: -10px 0 20px;
   padding: 12px 15px;
@@ -199,15 +191,11 @@ header {
   text-align: center;
 }
 
-.ocr-status.show {
+.receipt-selection-status.show {
   display: block;
 }
 
-.ocr-status.error {
-  color: #fca5a5;
-}
-
-.ocr-status.success {
+.receipt-selection-status.success {
   color: #86efac;
 }
 
@@ -425,39 +413,6 @@ header {
   text-align: center;
 }
 
-.ocr-confirm-preview {
-  width: min(220px, 64vw);
-  max-height: 32vh;
-}
-
-.ocr-confirm-preview img {
-  max-height: 32vh;
-}
-
-.ocr-confirm-label {
-  margin: 12px 0 4px;
-  color: #52677e;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.ocr-confirm-amount {
-  margin: 0 0 16px;
-  color: #0f355d;
-  font-size: clamp(38px, 11vw, 58px);
-  font-weight: 800;
-  line-height: 1.1;
-  text-align: center;
-}
-
-.ocr-confirm-notice {
-  margin: 0 0 16px;
-  color: #52677e;
-  font-size: 14px;
-  line-height: 1.6;
-  text-align: center;
-}
 
 .image-lightbox {
   align-items: center;
@@ -669,7 +624,7 @@ footer {
       </div>
 
 
-      <!-- レシート撮影・OCR -->
+      <!-- レシート画像添付 -->
 
       <input
         type="file"
@@ -679,17 +634,19 @@ footer {
       >
 
       <button
-        class="ocr-button"
-        id="ocrButton"
+        class="receipt-add-button"
+        id="receiptButton"
         type="button"
       >
-        📷 レシートを撮影して自動入力
+        📷 レシート画像を追加
       </button>
 
       <div
-        class="ocr-status"
-        id="ocrStatus"
-      ></div>
+        class="receipt-selection-status"
+        id="receiptSelectionStatus"
+      >
+        ✓ レシート画像を追加しました。割り勘結果と一緒に共有できます。
+      </div>
 
 
       <!-- 人数 -->
@@ -858,7 +815,7 @@ footer {
         集金合計 10,000円
       </div>
 
-      <!-- OCRに成功したレシート画像と計算結果を共有する -->
+      <!-- レシート画像と計算結果を共有する -->
       <button
         class="share"
         id="shareButton"
@@ -871,69 +828,6 @@ footer {
     </section>
 
   </main>
-
-
-  <!-- OCR候補を確認する画面 -->
-  <section
-    class="sheet"
-    id="ocrConfirmSheet"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="ocrConfirmTitle"
-  >
-    <div class="sheet-body">
-
-      <h2 id="ocrConfirmTitle">
-        読み取り結果を確認
-      </h2>
-
-      <button
-        class="receipt-preview ocr-confirm-preview"
-        id="ocrConfirmPreviewButton"
-        type="button"
-        aria-label="レシート画像を拡大して確認"
-      >
-        <img
-          id="ocrConfirmPreviewImage"
-          alt="OCRで使用したレシート画像"
-        >
-      </button>
-
-      <p class="ocr-confirm-label">
-        合計金額の候補
-      </p>
-
-      <p
-        class="ocr-confirm-amount"
-        id="ocrConfirmAmount"
-      ></p>
-
-      <p class="ocr-confirm-notice">
-        レシートを見て、合計金額が正しいか確認してください。
-      </p>
-
-      <div class="sheet-actions">
-        <button
-          class="close-sheet"
-          id="ocrConfirmManualButton"
-          type="button"
-        >
-          手入力する
-        </button>
-
-        <button
-          class="open-share"
-          id="ocrConfirmUseButton"
-          type="button"
-        >
-          この金額を使う
-        </button>
-      </div>
-
-    </div>
-  </section>
-
-
   <!-- 共有前の確認画面 -->
   <section
     class="sheet"
@@ -948,7 +842,7 @@ footer {
         共有する内容
       </h2>
 
-      <!-- OCRで使用した元のレシート画像を縮小表示する -->
+      <!-- 共有画像を縮小表示する -->
       <button
         class="receipt-preview"
         id="receiptPreviewButton"
@@ -1060,23 +954,14 @@ const copyButton =
 const shareButton =
   document.getElementById("shareButton");
 
-const ocrConfirmSheet =
-  document.getElementById("ocrConfirmSheet");
+const receiptInput =
+  document.getElementById("receiptInput");
 
-const ocrConfirmPreviewButton =
-  document.getElementById("ocrConfirmPreviewButton");
+const receiptButton =
+  document.getElementById("receiptButton");
 
-const ocrConfirmPreviewImage =
-  document.getElementById("ocrConfirmPreviewImage");
-
-const ocrConfirmAmount =
-  document.getElementById("ocrConfirmAmount");
-
-const ocrConfirmUseButton =
-  document.getElementById("ocrConfirmUseButton");
-
-const ocrConfirmManualButton =
-  document.getElementById("ocrConfirmManualButton");
+const receiptSelectionStatus =
+  document.getElementById("receiptSelectionStatus");
 
 const shareSheet =
   document.getElementById("shareSheet");
@@ -1105,13 +990,10 @@ const receiptLargeImage =
 const lightboxClose =
   document.getElementById("lightboxClose");
 
-/* OCRに成功した元画像を、このページを開いている間だけ保持する */
+/* 選択した元画像を、このページを開いている間だけ保持する */
 let receiptFileForShare = null;
 let shareImageFile = null;
 let shareImageUrl = null;
-let receiptFileForConfirm = null;
-let confirmCandidateAmount = null;
-let confirmReceiptUrl = null;
 
 const roundingInputs =
   document.querySelectorAll(
@@ -1373,7 +1255,6 @@ resetButton.addEventListener(
 
 
     clearReceiptForShare();
-    clearOCRConfirm();
 
     calculate();
 
@@ -1465,6 +1346,7 @@ function clearReceiptForShare() {
   shareSheet.classList.remove("show");
   imageLightbox.classList.remove("show");
   shareActionStatus.textContent = "";
+  receiptSelectionStatus.classList.remove("show");
 
 
   if (shareImageUrl) {
@@ -1486,49 +1368,7 @@ function setReceiptForShare(file) {
 
   receiptFileForShare = file;
   shareButton.disabled = false;
-
-}
-
-
-function clearOCRConfirm() {
-
-  receiptFileForConfirm = null;
-  confirmCandidateAmount = null;
-  ocrConfirmSheet.classList.remove("show");
-  ocrConfirmPreviewImage.removeAttribute("src");
-  ocrConfirmAmount.textContent = "";
-
-
-  if (confirmReceiptUrl) {
-
-    URL.revokeObjectURL(confirmReceiptUrl);
-    confirmReceiptUrl = null;
-
-  }
-
-}
-
-
-function showOCRConfirm(candidate, file) {
-
-  clearOCRConfirm();
-
-  receiptFileForConfirm = file;
-  confirmCandidateAmount = candidate.amount;
-  confirmReceiptUrl = URL.createObjectURL(file);
-  ocrConfirmPreviewImage.src = confirmReceiptUrl;
-  ocrConfirmAmount.textContent =
-    formatNumber(confirmCandidateAmount) + "円";
-  ocrConfirmSheet.classList.add("show");
-
-}
-
-
-function closeOCRConfirmAndFocusInput() {
-
-  clearOCRConfirm();
-  totalInput.focus();
-  totalInput.select();
+  receiptSelectionStatus.classList.add("show");
 
 }
 
@@ -1799,71 +1639,6 @@ shareButton.addEventListener(
 );
 
 
-ocrConfirmUseButton.addEventListener(
-  "click",
-  () => {
-
-    if (
-      confirmCandidateAmount === null ||
-      !receiptFileForConfirm
-    ) {
-      return;
-    }
-
-    const amount =
-      confirmCandidateAmount;
-    const file =
-      receiptFileForConfirm;
-
-    totalInput.value = amount;
-    calculate();
-    clearOCRConfirm();
-    setReceiptForShare(file);
-
-    showOCRStatus(
-      "✓ 合計 " +
-      formatNumber(amount) +
-      "円を入力しました",
-      "success"
-    );
-
-  }
-);
-
-
-ocrConfirmManualButton.addEventListener(
-  "click",
-  closeOCRConfirmAndFocusInput
-);
-
-
-ocrConfirmSheet.addEventListener(
-  "click",
-  event => {
-
-    if (event.target === ocrConfirmSheet) {
-      closeOCRConfirmAndFocusInput();
-    }
-
-  }
-);
-
-
-ocrConfirmPreviewButton.addEventListener(
-  "click",
-  () => {
-
-    if (!confirmReceiptUrl) {
-      return;
-    }
-
-    receiptLargeImage.src = confirmReceiptUrl;
-    imageLightbox.classList.add("show");
-
-  }
-);
-
-
 closeSheetButton.addEventListener(
   "click",
   closeShareSheet
@@ -1961,1309 +1736,30 @@ openShareButton.addEventListener(
 
 
 /* ==================================================
-   レシートOCR
+   レシート画像添付
 ================================================== */
 
-/* ==================================================
-   レシートOCR 改良版
-   ・画像を拡大＋補正
-   ・通常画像 / 強調画像 / 白黒画像をOCR
-   ・合計系キーワードを強く評価
-   ・小計 / 税 / お釣り / 預り金などを除外
-   ・レシート下部の金額を優先
-   ・複数回OCRで一致した金額を加点
-   ・確認画面なしで自動入力
-================================================== */
-
-const receiptInput =
-  document.getElementById("receiptInput");
-
-const ocrButton =
-  document.getElementById("ocrButton");
-
-const ocrStatus =
-  document.getElementById("ocrStatus");
-
-let ocrWorker = null;
-
-
-/* ==================================================
-   ステータス
-================================================== */
-
-function showOCRStatus(
-  message,
-  type = ""
-) {
-
-  ocrStatus.textContent =
-    message;
-
-  ocrStatus.className =
-    "ocr-status show " +
-    type;
-
-}
-
-
-/* ==================================================
-   OCRボタン
-================================================== */
-
-ocrButton.addEventListener(
+receiptButton.addEventListener(
   "click",
   () => {
-
     receiptInput.click();
-
   }
 );
 
 
-/* ==================================================
-   レシート撮影
-================================================== */
-
 receiptInput.addEventListener(
   "change",
-  async event => {
-
-    const file =
-      event.target.files[0];
+  event => {
+    const file = event.target.files?.[0];
 
     if (!file) {
       return;
     }
 
-
-    /* OCRに失敗した場合に古いレシートを共有しないよう、先に共有状態を解除する */
-    clearReceiptForShare();
-    clearOCRConfirm();
-
-
-    try {
-
-      ocrButton.disabled =
-        true;
-
-
-      showOCRStatus(
-        "📷 レシート画像を準備しています…"
-      );
-
-
-      /*
-       * OCRエンジンを初回だけ作成
-       */
-
-      if (!ocrWorker) {
-
-        showOCRStatus(
-          "🔧 OCRエンジンを準備しています…"
-        );
-
-
-        ocrWorker =
-          await Tesseract.createWorker(
-            ["jpn", "eng"],
-            1,
-            {
-
-              logger:
-                message => {
-
-                  if (
-                    message.status &&
-                    typeof message.progress ===
-                    "number"
-                  ) {
-
-                    const percent =
-                      Math.round(
-                        message.progress * 100
-                      );
-
-
-                    showOCRStatus(
-                      "🔍 OCR解析中… " +
-                      percent +
-                      "%"
-                    );
-
-                  }
-
-                }
-
-            }
-          );
-
-      }
-
-
-      /*
-       * レシート画像を
-       * 複数パターンに加工
-       */
-
-      const variants =
-        await createReceiptImageVariants(
-          file
-        );
-
-
-      const allResults =
-        await recognizeReceiptVariants(
-          variants,
-          "レシートを解析しています…"
-        );
-
-
-      console.log(
-        "OCR結果:",
-        allResults
-      );
-
-
-      /*
-       * 全OCR結果から
-       * 合計金額を判定
-       */
-
-      const candidates =
-        findBestReceiptAmounts(
-          allResults
-        );
-
-
-      console.log(
-        "金額候補:",
-        candidates
-      );
-
-
-      const safetyDecision =
-        evaluateReceiptAmountSafety(
-          candidates
-        );
-
-
-      /*
-       * 金額が見つからない
-       */
-
-      if (
-        safetyDecision.kind ===
-        "MANUAL"
-      ) {
-
-        showOCRStatus(
-          "⚠ 合計金額を確定できませんでした。レシートを確認して、総額を入力してください。",
-          "error"
-        );
-        totalInput.focus();
-        totalInput.select();
-
-        return;
-
-      }
-
-
-      if (
-        safetyDecision.kind ===
-        "CONFIRM"
-      ) {
-
-        showOCRConfirm(
-          safetyDecision.candidate,
-          file
-        );
-
-        showOCRStatus(
-          "⚠ 読み取った候補は " +
-          formatNumber(
-            safetyDecision.candidate.amount
-          ) +
-          "円です。内容を確認してください。",
-          "error"
-        );
-
-        console.log(
-          "OCR安全判定: CONFIRM",
-          safetyDecision
-        );
-
-        return;
-
-      }
-
-
-      /*
-       * ★ 確認画面なし
-       *
-       * 最有力候補を自動採用
-       */
-
-      const detectedAmount =
-        safetyDecision.candidate.amount;
-
-
-      /*
-       * 総額へ自動入力
-       */
-
-      totalInput.value =
-        detectedAmount;
-
-
-      /*
-       * 自動計算
-       */
-
-      calculate();
-
-
-      /* OCRに使った元画像を、共有時だけ使えるよう一時保持する */
-      setReceiptForShare(file);
-
-
-      /*
-       * 完了
-       */
-
-      showOCRStatus(
-        "✓ 合計 " +
-        formatNumber(
-          detectedAmount
-        ) +
-        "円を自動入力しました",
-        "success"
-      );
-
-
-    } catch (error) {
-
-      console.error(
-        "OCR Error:",
-        error
-      );
-
-
-      showOCRStatus(
-        "⚠ OCRでエラーが発生しました。もう一度撮影してください。",
-        "error"
-      );
-
-
-    } finally {
-
-      ocrButton.disabled =
-        false;
-
-
-      /*
-       * 同じ画像をもう一度
-       * 選択できるようにする
-       */
-
-      receiptInput.value =
-        "";
-
-    }
-
+    setReceiptForShare(file);
+    receiptInput.value = "";
   }
 );
-
-
-/* ==================================================
-   画像をOCR用に加工
-================================================== */
-
-async function createReceiptImageVariants(
-  file
-) {
-
-  const image =
-    await loadImage(file);
-
-
-  /*
-   * 大きすぎる画像は1800px程度に縮小
-   * 小さい画像は拡大
-   */
-
-  const maxWidth =
-    1800;
-
-
-  const scale =
-    Math.min(
-      2,
-      maxWidth /
-        image.naturalWidth
-    );
-
-
-  let width =
-    Math.max(
-      900,
-      Math.round(
-        image.naturalWidth *
-        scale
-      )
-    );
-
-
-  let height =
-    Math.round(
-      image.naturalHeight *
-      (
-        width /
-        image.naturalWidth
-      )
-    );
-
-
-  /*
-   * 元画像
-   */
-
-  let source =
-    document.createElement(
-      "canvas"
-    );
-
-
-  source.width =
-    width;
-
-  source.height =
-    height;
-
-
-  const sourceContext =
-    source.getContext(
-      "2d",
-      {
-        willReadFrequently:
-          true
-      }
-    );
-
-
-  sourceContext.imageSmoothingEnabled =
-    true;
-
-  sourceContext.imageSmoothingQuality =
-    "high";
-
-
-  sourceContext.drawImage(
-    image,
-    0,
-    0,
-    width,
-    height
-  );
-
-
-  /*
-   * ① 元画像を高解像度化
-   */
-
-  const original =
-    document.createElement(
-      "canvas"
-    );
-
-
-  original.width =
-    width;
-
-  original.height =
-    height;
-
-
-  original
-    .getContext("2d")
-    .drawImage(
-      source,
-      0,
-      0
-    );
-
-
-  /*
-   * ② グレースケール＋コントラスト強調
-   */
-
-  const enhanced =
-    document.createElement(
-      "canvas"
-    );
-
-
-  enhanced.width =
-    width;
-
-  enhanced.height =
-    height;
-
-
-  const enhancedContext =
-    enhanced.getContext(
-      "2d",
-      {
-        willReadFrequently:
-          true
-      }
-    );
-
-
-  enhancedContext.drawImage(
-    source,
-    0,
-    0
-  );
-
-
-  const imageData =
-    enhancedContext.getImageData(
-      0,
-      0,
-      width,
-      height
-    );
-
-
-  const data =
-    imageData.data;
-
-
-  for (
-    let i = 0;
-    i < data.length;
-    i += 4
-  ) {
-
-    const r =
-      data[i];
-
-    const g =
-      data[i + 1];
-
-    const b =
-      data[i + 2];
-
-
-    let gray =
-      0.299 * r +
-      0.587 * g +
-      0.114 * b;
-
-
-    /*
-     * コントラスト強調
-     */
-
-    gray =
-      (
-        (gray - 128) *
-        1.35
-      ) + 128;
-
-
-    gray =
-      Math.max(
-        0,
-        Math.min(
-          255,
-          gray
-        )
-      );
-
-
-    data[i] =
-      gray;
-
-    data[i + 1] =
-      gray;
-
-    data[i + 2] =
-      gray;
-
-  }
-
-
-  enhancedContext.putImageData(
-    imageData,
-    0,
-    0
-  );
-
-
-  /*
-   * ③ 白黒画像
-   */
-
-  const binary =
-    document.createElement(
-      "canvas"
-    );
-
-
-  binary.width =
-    width;
-
-  binary.height =
-    height;
-
-
-  const binaryContext =
-    binary.getContext(
-      "2d",
-      {
-        willReadFrequently:
-          true
-      }
-    );
-
-
-  binaryContext.drawImage(
-    enhanced,
-    0,
-    0
-  );
-
-
-  const binaryData =
-    binaryContext.getImageData(
-      0,
-      0,
-      width,
-      height
-    );
-
-
-  const pixels =
-    binaryData.data;
-
-
-  const threshold =
-    calculateOtsuThreshold(
-      pixels
-    );
-
-
-  for (
-    let i = 0;
-    i < pixels.length;
-    i += 4
-  ) {
-
-    const gray =
-      pixels[i];
-
-
-    const value =
-      gray > threshold
-        ? 255
-        : 0;
-
-
-    pixels[i] =
-      value;
-
-    pixels[i + 1] =
-      value;
-
-    pixels[i + 2] =
-      value;
-
-  }
-
-
-  binaryContext.putImageData(
-    binaryData,
-    0,
-    0
-  );
-
-
-  return [
-    original,
-    enhanced,
-    binary
-  ];
-
-}
-
-
-/* ==================================================
-   OCR画像バリアントを解析
-================================================== */
-
-async function recognizeReceiptVariants(
-  variants,
-  phaseLabel
-) {
-
-  const results =
-    [];
-
-  for (
-    let i = 0;
-    i < variants.length;
-    i++
-  ) {
-
-    showOCRStatus(
-      "\ud83d\udd0d " +
-      phaseLabel +
-      " " +
-      (i + 1) +
-      "/" +
-      variants.length
-    );
-
-    await ocrWorker.setParameters({
-
-      tessedit_pageseg_mode:
-        i === 0
-          ? "6"
-          : "11",
-
-      preserve_interword_spaces:
-        "1"
-
-    });
-
-    const result =
-      await ocrWorker.recognize(
-        variants[i]
-      );
-
-    results.push({
-
-      variant:
-        i,
-
-      text:
-        result.data.text || "",
-
-      confidence:
-        Number(
-          result.data.confidence
-        ) || 0,
-
-    });
-
-  }
-
-  return results;
-
-}
-
-
-/* ==================================================
-   画像読み込み
-================================================== */
-
-function loadImage(
-  file
-) {
-
-  return new Promise(
-    (
-      resolve,
-      reject
-    ) => {
-
-      const url =
-        URL.createObjectURL(
-          file
-        );
-
-
-      const image =
-        new Image();
-
-
-      image.onload =
-        () => {
-
-          URL.revokeObjectURL(
-            url
-          );
-
-
-          resolve(
-            image
-          );
-
-        };
-
-
-      image.onerror =
-        () => {
-
-          URL.revokeObjectURL(
-            url
-          );
-
-
-          reject(
-            new Error(
-              "画像を読み込めませんでした"
-            )
-          );
-
-        };
-
-
-      image.src =
-        url;
-
-    }
-  );
-
-}
-
-
-/* ==================================================
-   白黒化の閾値を自動計算
-================================================== */
-
-function calculateOtsuThreshold(
-  data
-) {
-
-  const histogram =
-    new Array(256)
-      .fill(0);
-
-
-  let total =
-    0;
-
-  let sum =
-    0;
-
-
-  /*
-   * 全画素ではなく
-   * 一定間隔で計算
-   */
-
-  for (
-    let i = 0;
-    i < data.length;
-    i += 16
-  ) {
-
-    const value =
-      data[i];
-
-
-    histogram[value]++;
-
-    total++;
-
-    sum +=
-      value;
-
-  }
-
-
-  let sumBackground =
-    0;
-
-  let weightBackground =
-    0;
-
-  let maxVariance =
-    0;
-
-  let threshold =
-    180;
-
-
-  for (
-    let t = 0;
-    t < 256;
-    t++
-  ) {
-
-    weightBackground +=
-      histogram[t];
-
-
-    if (
-      weightBackground ===
-      0
-    ) {
-      continue;
-    }
-
-
-    const weightForeground =
-      total -
-      weightBackground;
-
-
-    if (
-      weightForeground ===
-      0
-    ) {
-      break;
-    }
-
-
-    sumBackground +=
-      t *
-      histogram[t];
-
-
-    const meanBackground =
-      sumBackground /
-      weightBackground;
-
-
-    const meanForeground =
-      (
-        sum -
-        sumBackground
-      ) /
-      weightForeground;
-
-
-    const variance =
-      weightBackground *
-      weightForeground *
-      Math.pow(
-        meanBackground -
-        meanForeground,
-        2
-      );
-
-
-    if (
-      variance >
-      maxVariance
-    ) {
-
-      maxVariance =
-        variance;
-
-      threshold =
-        t;
-
-    }
-
-  }
-
-
-  return Math.max(
-    120,
-    Math.min(
-      210,
-      threshold
-    )
-  );
-
-}
-
-
-/* ==================================================
-   合計金額を判定
-================================================== */
-
-function findBestReceiptAmounts(
-  results
-) {
-
-  const candidates = [];
-
-  const priorityKeywords = [
-    "総合計", "税込合計", "お買上合計", "お買い上げ合計",
-    "合計", "ご請求額", "請求額", "お会計", "お支払",
-    "お支払い", "お買上", "お買い上げ", "TOTAL", "AMOUNT",
-    "GRAND TOTAL", "BALANCE DUE"
-  ];
-
-  const excludedKeywords = [
-    "お釣", "おつり", "釣銭", "預り", "お預り"
-  ];
-
-  const negativeKeywords = [
-    "小計", "消費税", "内税", "外税", "税額", "値引", "割引",
-    "クーポン", "ポイント", "SUBTOTAL", "CHANGE", "CASH"
-  ];
-
-  results.forEach((result, resultIndex) => {
-    const lines = normalizeOCRText(result.text)
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(Boolean);
-
-    lines.forEach((line, lineIndex) => {
-      const amounts = extractAmountsFromLine(line);
-      const priority = hasAnyKeyword(line, priorityKeywords);
-      const taxIncludedTotal = /税込\s*合計|税\s*込\s*合計/.test(line);
-      const standaloneTax = /(^|\s)税(\s|[:：]|$)/.test(line);
-      const negative = hasAnyKeyword(line, negativeKeywords) ||
-        (standaloneTax && !taxIncludedTotal);
-
-      amounts.forEach(amount => {
-        const excluded =
-          isAmountLinkedToExcludedKeyword(
-            line,
-            amount,
-            excludedKeywords
-          );
-
-        if (!isReasonableReceiptAmount(amount)) {
-          console.log("OCR金額候補: 除外", { amount, line, reason: "金額の範囲外" });
-          return;
-        }
-
-        if (excluded) {
-          console.log("OCR金額候補: 除外", { amount, line, reason: "お預り・お釣り・釣銭" });
-          return;
-        }
-
-        const reasons = [];
-        let score = result.confidence * 0.25;
-
-        if (priority) {
-          score += 180;
-          reasons.push(taxIncludedTotal ? "税込合計" : "合計系キーワード");
-        }
-
-        if (negative) {
-          score -= 160;
-          reasons.push("小計・税・値引など");
-        }
-
-        if (amount < 1000 && !priority) {
-          score -= 70;
-          reasons.push("合計表示のない3桁金額");
-        }
-
-        const position = lines.length <= 1 ? 1 : lineIndex / (lines.length - 1);
-        score += position * 45;
-
-        if (/[¥￥円]/.test(line)) score += 10;
-        if (amount >= 1000) score += 8;
-        if (amount >= 10000) score += 5;
-        score += Math.max(0, 8 - resultIndex * 2);
-
-        console.log("OCR金額候補: 採用候補", {
-          amount,
-          line,
-          score,
-          reasons: reasons.length > 0 ? reasons : ["通常候補"]
-        });
-
-        candidates.push({
-          amount,
-          score,
-          line,
-          confidence: result.confidence,
-          priority: priority && !negative,
-          negative,
-          excluded
-        });
-      });
-    });
-  });
-
-  const grouped = new Map();
-
-  candidates.forEach(candidate => {
-    const current = grouped.get(candidate.amount);
-
-    if (!current) {
-      grouped.set(candidate.amount, {
-        amount: candidate.amount,
-        score: candidate.score,
-        hits: 1,
-        lines: [candidate.line],
-        priorityHits: candidate.priority ? 1 : 0,
-        negativeHits: candidate.negative ? 1 : 0,
-        excludedHits: candidate.excluded ? 1 : 0,
-        confidenceTotal: candidate.confidence
-      });
-      return;
-    }
-
-    current.hits++;
-    current.score += candidate.score * 0.35;
-    current.lines.push(candidate.line);
-    current.priorityHits += candidate.priority ? 1 : 0;
-    current.negativeHits += candidate.negative ? 1 : 0;
-    current.excludedHits += candidate.excluded ? 1 : 0;
-    current.confidenceTotal += candidate.confidence;
-  });
-
-  return Array.from(grouped.values())
-    .map(candidate => ({
-      ...candidate,
-      score: candidate.score + Math.min(candidate.hits * 12, 36)
-    }))
-    .sort((a, b) => b.score !== a.score ? b.score - a.score : b.amount - a.amount)
-    .slice(0, 8);
-
-}
-
-
-/* ==================================================
-   OCR自動入力の安全判定
-================================================== */
-
-function evaluateReceiptAmountSafety(
-  candidates
-) {
-
-  const top =
-    candidates[0];
-
-  if (!top) {
-    return {
-      kind: "MANUAL",
-      reason: "候補なし"
-    };
-  }
-
-  const second =
-    candidates[1];
-
-  const scoreGap =
-    second
-      ? top.score - second.score
-      : top.score;
-
-  const averageConfidence =
-    top.confidenceTotal /
-    top.hits;
-
-  const isSafe =
-    top.amount >= 1000 &&
-    top.hits >= 2 &&
-    top.priorityHits >= 2 &&
-    top.negativeHits === 0 &&
-    top.excludedHits === 0 &&
-    scoreGap >= 100 &&
-    averageConfidence >= 50;
-
-  return {
-    kind: isSafe ? "AUTO" : "CONFIRM",
-    candidate: top,
-    reason: {
-      hits: top.hits,
-      priorityHits: top.priorityHits,
-      negativeHits: top.negativeHits,
-      excludedHits: top.excludedHits,
-      scoreGap: Math.round(scoreGap),
-      averageConfidence: Math.round(averageConfidence)
-    }
-  };
-
-}
-
-/* ==================================================
-   OCR文字の正規化
-================================================== */
-
-function normalizeOCRText(
-  text
-) {
-
-  return String(
-    text || ""
-  )
-
-    .normalize(
-      "NFKC"
-    )
-
-    .replace(
-      /[\u3000]/g,
-      " "
-    )
-
-    .replace(
-      /合\s*計/g,
-      "合計"
-    )
-
-    .replace(
-      /お\s*支\s*払/g,
-      "お支払"
-    )
-
-    .replace(
-      /小\s*計/g,
-      "小計"
-    )
-
-    .replace(
-      /T\s*O\s*T\s*A\s*L/gi,
-      "TOTAL"
-    );
-
-}
-
-
-/* ==================================================
-   キーワード検索
-================================================== */
-
-function isAmountLinkedToExcludedKeyword(
-  line,
-  amount,
-  keywords
-) {
-
-  const amountPattern =
-    String(amount)
-      .split("")
-      .join("[,\\.\\s]*");
-
-  const keywordPattern =
-    keywords
-      .map(
-        keyword =>
-          keyword.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          )
-      )
-      .join("|");
-
-  const excludedAmountPattern =
-    new RegExp(
-      "(?:" +
-      keywordPattern +
-      ")[^0-9]{0,12}" +
-      amountPattern +
-      "(?!\\d)",
-      "i"
-    );
-
-  return excludedAmountPattern.test(line);
-
-}
-
-
-function hasAnyKeyword(
-  text,
-  keywords
-) {
-
-  return keywords.some(
-    keyword =>
-      text
-        .toLowerCase()
-        .includes(
-          keyword.toLowerCase()
-        )
-  );
-
-}
-
-
-/* ==================================================
-   金額抽出
-================================================== */
-
-function extractAmountsFromLine(
-  line
-) {
-
-  /*
-   * OCRで間違いやすい
-   * O / o → 0
-   * I / l / | → 1
-   * S → 5
-   * B → 8
-   */
-
-  const normalized =
-    line
-
-      .replace(
-        /[Oo]/g,
-        "0"
-      )
-
-      .replace(
-        /[Il|]/g,
-        "1"
-      )
-
-      .replace(
-        /[Ｓｓ]/g,
-        "5"
-      )
-
-      .replace(
-        /[Ｂｂ]/g,
-        "8"
-      );
-
-
-  const matches =
-    normalized.match(
-      /(?:[¥￥]\s*)?(?:\d{1,3}(?:[,.]\d{3})+|\d{1,3}(?:\s\d{3})+|\d{3,7})\s*(?:円|¥|￥)?/g
-    );
-
-
-  if (!matches) {
-    return [];
-  }
-
-
-  return matches
-
-    .map(
-      value => {
-
-        const cleaned =
-          value.replace(
-            /[^0-9]/g,
-            ""
-          );
-
-
-        return Number(
-          cleaned
-        );
-
-      }
-    )
-
-    .filter(
-      Number.isFinite
-    );
-
-}
-
-
-/* ==================================================
-   金額チェック
-================================================== */
-
-function isReasonableReceiptAmount(
-  amount
-) {
-
-  return (
-    amount >= 100 &&
-    amount <= 1000000
-  );
-
-}
-
 
 /* ==================================================
    初期状態
