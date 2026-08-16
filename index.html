@@ -1260,6 +1260,13 @@ function sanitizeIntegerInput(input, minimum) {
       input.value.replace(/^0+/, "");
   }
 
+  if (
+    minimum === 0
+  ) {
+    input.value =
+      input.value.replace(/^0+(?=\d)/, "");
+  }
+
 }
 
 
@@ -1298,6 +1305,18 @@ function addIntegerInputValidation(input, minimum) {
     () => {
       sanitizeIntegerInput(input, minimum);
       calculate();
+    }
+  );
+
+  input.addEventListener(
+    "keydown",
+    event => {
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        input.blur();
+      }
+
     }
   );
 
