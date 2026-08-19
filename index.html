@@ -491,6 +491,98 @@ footer {
   margin-top: 3px;
 }
 
+.privacy-link {
+  height: auto;
+  min-height: 0;
+  margin-top: 7px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.privacy-link:hover {
+  color: #e2e8f0;
+}
+
+.privacy-dialog-text {
+  margin: 0;
+  color: #40556c;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.privacy-dialog-text + .privacy-dialog-text {
+  margin-top: 10px;
+}
+
+.privacy-dialog-text a {
+  color: #0369a1;
+}
+
+.privacy-actions {
+  margin-top: 18px;
+}
+
+.analytics-consent {
+  position: fixed;
+  z-index: 20;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: max(16px, env(safe-area-inset-left));
+  width: min(460px, calc(100% - 32px));
+  margin-left: auto;
+  padding: 15px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 16px;
+  background: rgba(15,23,42,.97);
+  box-shadow: 0 14px 36px rgba(0,0,0,.32);
+}
+
+.analytics-consent[hidden] {
+  display: none;
+}
+
+.analytics-consent p {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.analytics-consent-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.analytics-consent-actions button {
+  height: 38px;
+  padding: 0 13px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.analytics-accept {
+  background: #38bdf8;
+  color: #082f49;
+}
+
+.analytics-reject {
+  background: rgba(255,255,255,.1);
+  color: #e2e8f0;
+}
+
+.analytics-details {
+  margin-left: auto;
+  background: transparent;
+  color: #bae6fd;
+  text-decoration: underline;
+}
+
 /* タブレット */
 
 @media (max-width: 760px) {
@@ -561,6 +653,13 @@ footer {
 
   .sheet-body {
     padding: 22px 16px 24px;
+  }
+
+  .analytics-consent {
+    width: calc(100% - 28px);
+    right: 14px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 14px;
   }
 }
 </style>
@@ -911,11 +1010,117 @@ footer {
   </section>
 
 
+  <!-- プライバシー表示 -->
+  <section
+    class="sheet"
+    id="privacyDialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="privacyDialogTitle"
+  >
+    <div class="sheet-body">
+
+      <h2 id="privacyDialogTitle">
+        プライバシー
+      </h2>
+
+      <p class="privacy-dialog-text">
+        WARICANでは、利用状況の把握と改善のためにGoogle Analytics（GA4）を利用する場合があります。Cookie等の識別子が使用されることがあります。
+      </p>
+
+      <p class="privacy-dialog-text">
+        総額、人数、割り勘結果、レシート画像、入力内容、共有内容をGoogle Analyticsへ送信することはありません。Analyticsの利用はいつでも変更できます。
+      </p>
+
+      <p class="privacy-dialog-text">
+        <a
+          href="https://policies.google.com/technologies/partner-sites?hl=ja"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Googleによるデータ利用について</a>
+      </p>
+
+      <div class="sheet-actions privacy-actions">
+        <button
+          class="close-sheet"
+          id="privacyCloseButton"
+          type="button"
+        >
+          閉じる
+        </button>
+
+        <button
+          class="open-share"
+          id="privacyRejectButton"
+          type="button"
+        >
+          利用しない
+        </button>
+
+        <button
+          class="open-share"
+          id="privacyAcceptButton"
+          type="button"
+        >
+          利用する
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- Analytics利用の初回選択 -->
+  <section
+    class="analytics-consent"
+    id="analyticsConsent"
+    aria-label="Analytics利用の確認"
+    hidden
+  >
+    <p>
+      WARICANでは、利用状況の把握と改善のためGoogle Analyticsを使用します。
+    </p>
+
+    <div class="analytics-consent-actions">
+      <button
+        class="analytics-accept"
+        id="analyticsAcceptButton"
+        type="button"
+      >
+        利用する
+      </button>
+
+      <button
+        class="analytics-reject"
+        id="analyticsRejectButton"
+        type="button"
+      >
+        利用しない
+      </button>
+
+      <button
+        class="analytics-details"
+        id="analyticsDetailsButton"
+        type="button"
+      >
+        詳細
+      </button>
+    </div>
+  </section>
+
+
   <footer>
     ブラウザだけで動作するシンプル割り勘計算ツール
     <div class="app-version">
       Version 1.1
     </div>
+    <button
+      class="privacy-link"
+      id="privacyButton"
+      type="button"
+    >
+      プライバシー
+    </button>
   </footer>
 
 </div>
@@ -990,6 +1195,33 @@ const receiptLargeImage =
 const lightboxClose =
   document.getElementById("lightboxClose");
 
+const analyticsConsent =
+  document.getElementById("analyticsConsent");
+
+const analyticsAcceptButton =
+  document.getElementById("analyticsAcceptButton");
+
+const analyticsRejectButton =
+  document.getElementById("analyticsRejectButton");
+
+const analyticsDetailsButton =
+  document.getElementById("analyticsDetailsButton");
+
+const privacyButton =
+  document.getElementById("privacyButton");
+
+const privacyDialog =
+  document.getElementById("privacyDialog");
+
+const privacyCloseButton =
+  document.getElementById("privacyCloseButton");
+
+const privacyAcceptButton =
+  document.getElementById("privacyAcceptButton");
+
+const privacyRejectButton =
+  document.getElementById("privacyRejectButton");
+
 /* 選択した元画像を、このページを開いている間だけ保持する */
 let receiptFileForShare = null;
 let shareImageFile = null;
@@ -999,6 +1231,117 @@ const roundingInputs =
   document.querySelectorAll(
     'input[name="rounding"]'
   );
+
+
+/* ==================================================
+   Google Analytics（同意した場合のみ読み込む）
+================================================== */
+
+const analyticsConsentKey =
+  "warican-analytics-consent";
+
+const analyticsMeasurementId =
+  "G-4WK5JH7G4T";
+
+let analyticsLoaded = false;
+
+function getAnalyticsConsent() {
+
+  try {
+    return localStorage.getItem(analyticsConsentKey);
+  } catch (error) {
+    return null;
+  }
+
+}
+
+
+function saveAnalyticsConsent(consent) {
+
+  try {
+    localStorage.setItem(
+      analyticsConsentKey,
+      consent
+    );
+  } catch (error) {
+    /* 保存できない場合は、このページを閉じるまでの選択として扱う */
+  }
+
+}
+
+
+function loadAnalytics() {
+
+  if (
+    analyticsLoaded ||
+    document.querySelector("script[data-warican-ga4]")
+  ) {
+    return;
+  }
+
+  analyticsLoaded = true;
+
+  window.dataLayer = window.dataLayer || [];
+
+  window.gtag = window.gtag || function() {
+    window.dataLayer.push(arguments);
+  };
+
+  window.gtag("js", new Date());
+  window.gtag("config", analyticsMeasurementId);
+
+  const analyticsScript =
+    document.createElement("script");
+
+  analyticsScript.async = true;
+  analyticsScript.src =
+    "https://www.googletagmanager.com/gtag/js?id=" +
+    encodeURIComponent(analyticsMeasurementId);
+  analyticsScript.dataset.waricanGa4 = "true";
+
+  document.head.appendChild(analyticsScript);
+
+}
+
+
+function applyAnalyticsConsent(consent, reloadPage) {
+
+  saveAnalyticsConsent(consent);
+  analyticsConsent.hidden = true;
+
+  if (consent === "accepted") {
+    loadAnalytics();
+  }
+
+  if (reloadPage) {
+    window.location.reload();
+  }
+
+}
+
+
+function openPrivacyDialog() {
+
+  privacyDialog.classList.add("show");
+
+}
+
+
+function closePrivacyDialog() {
+
+  privacyDialog.classList.remove("show");
+
+}
+
+
+const savedAnalyticsConsent =
+  getAnalyticsConsent();
+
+if (savedAnalyticsConsent === "accepted") {
+  loadAnalytics();
+} else if (savedAnalyticsConsent !== "rejected") {
+  analyticsConsent.hidden = false;
+}
 
 
 /* ==================================================
@@ -1758,6 +2101,85 @@ receiptInput.addEventListener(
 
     setReceiptForShare(file);
     receiptInput.value = "";
+  }
+);
+
+
+/* ==================================================
+   Analytics利用の選択とプライバシー表示
+================================================== */
+
+analyticsAcceptButton.addEventListener(
+  "click",
+  () => {
+    applyAnalyticsConsent("accepted", false);
+  }
+);
+
+
+analyticsRejectButton.addEventListener(
+  "click",
+  () => {
+    applyAnalyticsConsent("rejected", false);
+  }
+);
+
+
+analyticsDetailsButton.addEventListener(
+  "click",
+  () => {
+    analyticsConsent.hidden = true;
+    openPrivacyDialog();
+  }
+);
+
+
+privacyButton.addEventListener(
+  "click",
+  openPrivacyDialog
+);
+
+
+privacyCloseButton.addEventListener(
+  "click",
+  () => {
+    closePrivacyDialog();
+
+    if (!getAnalyticsConsent()) {
+      analyticsConsent.hidden = false;
+    }
+  }
+);
+
+
+privacyAcceptButton.addEventListener(
+  "click",
+  () => {
+    closePrivacyDialog();
+    applyAnalyticsConsent("accepted", false);
+  }
+);
+
+
+privacyRejectButton.addEventListener(
+  "click",
+  () => {
+    closePrivacyDialog();
+    applyAnalyticsConsent("rejected", true);
+  }
+);
+
+
+privacyDialog.addEventListener(
+  "click",
+  event => {
+    if (event.target === privacyDialog) {
+      closePrivacyDialog();
+
+      if (!getAnalyticsConsent()) {
+        analyticsConsent.hidden = false;
+      }
+    }
   }
 );
 
