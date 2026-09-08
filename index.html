@@ -1444,13 +1444,31 @@ function closeModal(dialog) {
 }
 
 
+function focusElementIfAvailable(element) {
+
+  if (
+    !element ||
+    !element.isConnected ||
+    element.disabled ||
+    element.hidden ||
+    element.getClientRects().length === 0
+  ) {
+    return false;
+  }
+
+  element.focus();
+  return document.activeElement === element;
+
+}
+
+
 function restoreDialogTrigger(dialog) {
 
   const trigger = dialogTriggers.get(dialog);
   dialogTriggers.delete(dialog);
 
-  if (trigger && trigger.isConnected) {
-    trigger.focus();
+  if (!focusElementIfAvailable(trigger)) {
+    focusElementIfAvailable(totalInput);
   }
 
 }

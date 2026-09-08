@@ -173,6 +173,42 @@ test("拡大画像とprivacy dialogもEscapeとfocus復帰に対応する", asyn
   await context.close();
 });
 
+test("Analytics詳細から利用すると非表示triggerではなく総額入力へfocusする", async () => {
+  const { context, page } = await newPage();
+
+  await page.locator("#analyticsDetailsButton").click();
+  await page.locator("#privacyAcceptButton").click();
+  await page.waitForFunction(() =>
+    !document.querySelector("#privacyDialog").open &&
+    document.activeElement.id === "total"
+  );
+
+  assert.equal(await page.locator("#privacyDialog").evaluate(element => element.open), false);
+  assert.equal(await page.locator("#analyticsConsent").evaluate(element => element.hidden), true);
+  assert.equal(await page.evaluate(() => document.activeElement.id), "total");
+  assert.notEqual(await page.evaluate(() => document.activeElement.tagName), "BODY");
+
+  await context.close();
+});
+
+test("Analytics詳細から利用しない場合も総額入力へfocusする", async () => {
+  const { context, page } = await newPage();
+
+  await page.locator("#analyticsDetailsButton").click();
+  await page.locator("#privacyRejectButton").click();
+  await page.waitForFunction(() =>
+    !document.querySelector("#privacyDialog").open &&
+    document.activeElement.id === "total"
+  );
+
+  assert.equal(await page.locator("#privacyDialog").evaluate(element => element.open), false);
+  assert.equal(await page.locator("#analyticsConsent").evaluate(element => element.hidden), true);
+  assert.equal(await page.evaluate(() => document.activeElement.id), "total");
+  assert.notEqual(await page.evaluate(() => document.activeElement.tagName), "BODY");
+
+  await context.close();
+});
+
 test("プライバシーで利用しないを選んでも入力と画像を保持する", async () => {
   const { context, page } = await newPage();
   await page.locator("#total").fill("1234");
