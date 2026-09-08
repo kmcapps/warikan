@@ -19,10 +19,14 @@
 :root {
   --bg: #0f172a;
   --card: rgba(255,255,255,.08);
-  --border: rgba(255,255,255,.12);
+  --border: rgba(129,140,248,.2);
   --text: #f8fafc;
   --muted: #94a3b8;
-  --accent: #38bdf8;
+  --accent: #7c3aed;
+  --accent-purple: #7c3aed;
+  --accent-blue: #2563eb;
+  --accent-soft: rgba(124,58,237,.18);
+  --brand-gradient: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
 }
 
 body {
@@ -36,8 +40,8 @@ body {
     sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 15% 20%, rgba(56,189,248,.15), transparent 30%),
-    radial-gradient(circle at 85% 80%, rgba(99,102,241,.18), transparent 30%),
+    radial-gradient(circle at 15% 20%, rgba(124,58,237,.1), transparent 32%),
+    radial-gradient(circle at 85% 80%, rgba(37,99,235,.12), transparent 34%),
     var(--bg);
   display: flex;
   align-items: center;
@@ -124,7 +128,7 @@ header {
 .integer-input {
   width: 100%;
   height: 68px;
-  border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(129,140,248,.2);
   border-radius: 17px;
   outline: none;
   padding: 0 65px 0 18px;
@@ -137,7 +141,7 @@ header {
 
 .integer-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(56,189,248,.12);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .unit {
@@ -156,24 +160,40 @@ header {
   display: none;
 }
 
+.rounding-field {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rounding-field legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.receipt-option {
+  margin-top: 18px;
+}
+
 .receipt-add-button {
   width: 100%;
-  height: 56px;
-  margin-top: -5px;
-  margin-bottom: 22px;
-  border: 0;
+  height: 48px;
+  border: 1px solid #cbd5e1;
   border-radius: 16px;
-  background: linear-gradient(135deg, #38bdf8, #6366f1);
-  color: white;
-  font-size: 15px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(56,189,248,.15);
   transition: .2s;
 }
 
 .receipt-add-button:hover {
-  transform: translateY(-1px);
+  border-color: #8b5cf6;
+  background: #f5f3ff;
 }
 
 .receipt-add-button:active {
@@ -182,11 +202,11 @@ header {
 
 .receipt-selection-status {
   display: none;
-  margin: -10px 0 20px;
+  margin: 10px 0 0;
   padding: 12px 15px;
   border-radius: 13px;
-  background: rgba(255,255,255,.06);
-  color: #cbd5e1;
+  background: #eef2ff;
+  color: #475569;
   font-size: 12px;
   text-align: center;
 }
@@ -196,7 +216,7 @@ header {
 }
 
 .receipt-selection-status.success {
-  color: #86efac;
+  color: #166534;
 }
 
 /* 端数 */
@@ -208,14 +228,18 @@ header {
 }
 
 .rounding input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
 }
 
 .rounding label {
   height: 50px;
   margin: 0;
   border-radius: 13px;
-  border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(129,140,248,.18);
   background: rgba(255,255,255,.05);
   color: #cbd5e1;
   display: flex;
@@ -228,13 +252,15 @@ header {
 }
 
 .rounding label:hover {
-  background: rgba(255,255,255,.1);
+  border-color: rgba(167,139,250,.45);
+  background: rgba(124,58,237,.1);
 }
 
 .rounding input:checked + label {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #f8fafc;
+  background: var(--brand-gradient);
+  color: white;
+  border-color: rgba(196,181,253,.85);
+  box-shadow: 0 5px 14px rgba(79,70,229,.2);
 }
 
 /* 結果 */
@@ -300,7 +326,7 @@ header {
 .share {
   width: 100%;
   margin-top: 18px;
-  background: linear-gradient(135deg, #0ea5e9, #4f46e5);
+  background: var(--brand-gradient);
   color: white;
   box-shadow: 0 10px 22px rgba(79,70,229,.18);
 }
@@ -317,6 +343,13 @@ header {
   position: fixed;
   z-index: 10;
   inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .sheet {
@@ -325,9 +358,14 @@ header {
   background: rgba(15,23,42,.58);
 }
 
-.sheet.show,
-.image-lightbox.show {
+.sheet[open],
+.image-lightbox[open] {
   display: flex;
+}
+
+.sheet::backdrop,
+.image-lightbox::backdrop {
+  background: transparent;
 }
 
 .sheet-body {
@@ -401,7 +439,7 @@ header {
 }
 
 .open-share {
-  background: #0ea5e9;
+  background: #4f46e5;
   color: white;
 }
 
@@ -443,6 +481,7 @@ header {
 
 .buttons {
   display: flex;
+  width: 100%;
   gap: 8px;
   margin-top: 22px;
 }
@@ -462,6 +501,11 @@ button {
   background: rgba(255,255,255,.06);
 }
 
+.result-panel .reset {
+  color: #475569;
+  background: #e2e8f0;
+}
+
 .copy {
   flex: 1.5;
   color: #0f172a;
@@ -474,6 +518,12 @@ button:hover {
 
 button:active {
   transform: scale(.98);
+}
+
+button:focus-visible,
+.rounding input:focus-visible + label {
+  outline: 2px solid rgba(167,139,250,.9);
+  outline-offset: 3px;
 }
 
 .copied {
@@ -505,7 +555,7 @@ footer {
 }
 
 .privacy-link:hover {
-  color: #e2e8f0;
+  color: #c4b5fd;
 }
 
 .privacy-dialog-text {
@@ -536,7 +586,7 @@ footer {
   width: min(460px, calc(100% - 32px));
   margin-left: auto;
   padding: 15px;
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(15,23,42,.97);
   box-shadow: 0 14px 36px rgba(0,0,0,.32);
@@ -567,8 +617,8 @@ footer {
 }
 
 .analytics-accept {
-  background: #38bdf8;
-  color: #082f49;
+  background: #4f46e5;
+  color: white;
 }
 
 .analytics-reject {
@@ -579,7 +629,7 @@ footer {
 .analytics-details {
   margin-left: auto;
   background: transparent;
-  color: #bae6fd;
+  color: #c4b5fd;
   text-decoration: underline;
 }
 
@@ -634,7 +684,7 @@ footer {
   }
 
   .result-panel {
-    min-height: 330px;
+    min-height: 285px;
     padding: 24px 15px;
     border-radius: 20px;
   }
@@ -644,7 +694,7 @@ footer {
   }
 
   .result-number {
-    font-size: 65px;
+    font-size: 58px;
   }
 
   .buttons {
@@ -656,10 +706,13 @@ footer {
   }
 
   .analytics-consent {
+    position: static;
     width: calc(100% - 28px);
-    right: 14px;
-    bottom: max(14px, env(safe-area-inset-bottom));
-    left: 14px;
+    margin: 14px auto 0;
+  }
+
+  body.analytics-consent-visible {
+    padding-bottom: 14px;
   }
 }
 </style>
@@ -723,31 +776,6 @@ footer {
       </div>
 
 
-      <!-- レシート画像添付 -->
-
-      <input
-        type="file"
-        id="receiptInput"
-        accept="image/*"
-        capture="environment"
-      >
-
-      <button
-        class="receipt-add-button"
-        id="receiptButton"
-        type="button"
-      >
-        📷 レシート画像を追加
-      </button>
-
-      <div
-        class="receipt-selection-status"
-        id="receiptSelectionStatus"
-      >
-        ✓ レシート画像を追加しました。割り勘結果と一緒に共有できます。
-      </div>
-
-
       <!-- 人数 -->
 
       <div class="field">
@@ -778,11 +806,11 @@ footer {
 
       <!-- 端数 -->
 
-      <div class="field">
+      <fieldset class="field rounding-field">
 
-        <label>
-          1人あたりの端数を切り上げ
-        </label>
+        <legend>
+          1人あたりの端数処理
+        </legend>
 
         <div class="rounding">
 
@@ -796,7 +824,7 @@ footer {
             >
 
             <label for="r0">
-              そのまま
+              1円（四捨五入）
             </label>
           </div>
 
@@ -844,30 +872,8 @@ footer {
 
         </div>
 
-      </div>
+      </fieldset>
 
-
-      <!-- ボタン -->
-
-      <div class="buttons">
-
-        <button
-          class="reset"
-          id="resetButton"
-          type="button"
-        >
-          ↺ リセット
-        </button>
-
-        <button
-          class="copy"
-          id="copyButton"
-          type="button"
-        >
-          ⧉ 結果をコピー
-        </button>
-
-      </div>
 
     </section>
 
@@ -910,8 +916,51 @@ footer {
       <div
         class="difference"
         id="difference"
+        role="status"
+        aria-live="polite"
       >
         集金合計 10,000円
+      </div>
+
+      <div class="buttons">
+        <button
+          class="reset"
+          id="resetButton"
+          type="button"
+        >
+          ↺ リセット
+        </button>
+
+        <button
+          class="copy"
+          id="copyButton"
+          type="button"
+        >
+          ⧉ 結果をコピー
+        </button>
+      </div>
+
+      <!-- 任意のレシート画像添付 -->
+      <div class="receipt-option">
+        <input
+          type="file"
+          id="receiptInput"
+          accept="image/*"
+          capture="environment"
+        >
+
+        <button
+          class="receipt-add-button"
+          id="receiptButton"
+          type="button"
+        >レシート画像を追加（任意）</button>
+
+        <div
+          class="receipt-selection-status"
+          id="receiptSelectionStatus"
+        >
+          ✓ レシート画像を追加しました。割り勘結果と一緒に共有できます。
+        </div>
       </div>
 
       <!-- レシート画像と計算結果を共有する -->
@@ -928,7 +977,7 @@ footer {
 
   </main>
   <!-- 共有前の確認画面 -->
-  <section
+  <dialog
     class="sheet"
     id="shareSheet"
     role="dialog"
@@ -984,11 +1033,11 @@ footer {
       ></p>
 
     </div>
-  </section>
+  </dialog>
 
 
   <!-- レシート画像を大きく確認する画面 -->
-  <section
+  <dialog
     class="image-lightbox"
     id="imageLightbox"
     role="dialog"
@@ -1007,11 +1056,11 @@ footer {
       id="receiptLargeImage"
       alt="共有画像の拡大表示"
     >
-  </section>
+  </dialog>
 
 
   <!-- プライバシー表示 -->
-  <section
+  <dialog
     class="sheet"
     id="privacyDialog"
     role="dialog"
@@ -1067,7 +1116,7 @@ footer {
       </div>
 
     </div>
-  </section>
+  </dialog>
 
 
   <!-- Analytics利用の初回選択 -->
@@ -1126,6 +1175,7 @@ footer {
 </div>
 
 
+<script src="warican-core.js"></script>
 <script>
 
 /* ==================================================
@@ -1222,10 +1272,25 @@ const privacyAcceptButton =
 const privacyRejectButton =
   document.getElementById("privacyRejectButton");
 
+const {
+  calculateSplit,
+  formatDifference,
+  buildShareText,
+  createLatestRequestGuard,
+  classifyShareError
+} = window.WaricanCore;
+
 /* 選択した元画像を、このページを開いている間だけ保持する */
 let receiptFileForShare = null;
 let shareImageFile = null;
 let shareImageUrl = null;
+let currentSplitResult = null;
+
+const shareGenerationGuard =
+  createLatestRequestGuard();
+
+const dialogTriggers =
+  new WeakMap();
 
 const roundingInputs =
   document.querySelectorAll(
@@ -1280,6 +1345,7 @@ function loadAnalytics() {
   }
 
   analyticsLoaded = true;
+  window[`ga-disable-${analyticsMeasurementId}`] = false;
 
   window.dataLayer = window.dataLayer || [];
 
@@ -1288,6 +1354,9 @@ function loadAnalytics() {
   };
 
   window.gtag("js", new Date());
+  window.gtag("consent", "update", {
+    analytics_storage: "granted"
+  });
   window.gtag("config", analyticsMeasurementId);
 
   const analyticsScript =
@@ -1304,32 +1373,103 @@ function loadAnalytics() {
 }
 
 
-function applyAnalyticsConsent(consent, reloadPage) {
+function setAnalyticsConsentVisible(visible) {
+
+  analyticsConsent.hidden = !visible;
+  document.body.classList.toggle(
+    "analytics-consent-visible",
+    visible
+  );
+
+}
+
+
+function disableAnalytics() {
+
+  window[`ga-disable-${analyticsMeasurementId}`] = true;
+
+  if (typeof window.gtag === "function") {
+    window.gtag("consent", "update", {
+      analytics_storage: "denied"
+    });
+  }
+
+  const analyticsScript =
+    document.querySelector("script[data-warican-ga4]");
+
+  if (analyticsScript) {
+    analyticsScript.remove();
+  }
+
+  analyticsLoaded = false;
+
+}
+
+
+function applyAnalyticsConsent(consent) {
 
   saveAnalyticsConsent(consent);
-  analyticsConsent.hidden = true;
+  setAnalyticsConsentVisible(false);
 
   if (consent === "accepted") {
     loadAnalytics();
-  }
-
-  if (reloadPage) {
-    window.location.reload();
+  } else {
+    disableAnalytics();
   }
 
 }
 
 
-function openPrivacyDialog() {
+function openModal(dialog, focusTarget, trigger) {
 
-  privacyDialog.classList.add("show");
+  dialogTriggers.set(dialog, trigger || document.activeElement);
+
+  if (!dialog.open) {
+    dialog.showModal();
+  }
+
+  requestAnimationFrame(() => {
+    focusTarget.focus();
+  });
+
+}
+
+
+function closeModal(dialog) {
+
+  if (dialog.open) {
+    dialog.close();
+  }
+
+}
+
+
+function restoreDialogTrigger(dialog) {
+
+  const trigger = dialogTriggers.get(dialog);
+  dialogTriggers.delete(dialog);
+
+  if (trigger && trigger.isConnected) {
+    trigger.focus();
+  }
+
+}
+
+
+function openPrivacyDialog(trigger) {
+
+  openModal(
+    privacyDialog,
+    privacyCloseButton,
+    trigger || privacyButton
+  );
 
 }
 
 
 function closePrivacyDialog() {
 
-  privacyDialog.classList.remove("show");
+  closeModal(privacyDialog);
 
 }
 
@@ -1339,8 +1479,10 @@ const savedAnalyticsConsent =
 
 if (savedAnalyticsConsent === "accepted") {
   loadAnalytics();
+} else if (savedAnalyticsConsent === "rejected") {
+  disableAnalytics();
 } else if (savedAnalyticsConsent !== "rejected") {
-  analyticsConsent.hidden = false;
+  setAnalyticsConsentVisible(true);
 }
 
 
@@ -1381,42 +1523,19 @@ function calculate() {
       ? Number(checkedRounding.value)
       : 1;
 
-  const rawAmount =
-    total / people;
+  currentSplitResult =
+    calculateSplit(total, people, rounding);
 
-  let amount;
-
-
-  /*
-   * 「そのまま」
-   *
-   * 1円単位で四捨五入
-   */
-
-  if (rounding === 1) {
-
-    amount =
-      Math.round(rawAmount);
-
-  } else {
-
-    amount =
-      Math.ceil(
-        rawAmount / rounding
-      ) * rounding;
-
+  if (!currentSplitResult) {
+    resultElement.textContent = "—";
+    differenceElement.textContent =
+      "入力値を確認してください";
+    return null;
   }
 
 
-  const collected =
-    amount * people;
-
-  const difference =
-    collected - total;
-
-
   resultElement.textContent =
-    formatNumber(amount);
+    formatNumber(currentSplitResult.perPerson);
 
   totalText.textContent =
     formatNumber(total) + "円";
@@ -1424,25 +1543,10 @@ function calculate() {
   peopleText.textContent =
     people + "人";
 
+  differenceElement.textContent =
+    formatDifference(currentSplitResult);
 
-  if (difference > 0) {
-
-    differenceElement.textContent =
-      "集金合計 " +
-      formatNumber(collected) +
-      "円 ／ 余り " +
-      formatNumber(difference) +
-      "円";
-
-  } else {
-
-    differenceElement.textContent =
-      "集金合計 " +
-      formatNumber(collected) +
-      "円";
-
-  }
-
+  return currentSplitResult;
 }
 
 
@@ -1498,7 +1602,13 @@ function sanitizeIntegerInput(input, minimum) {
 
 function validateInputsForAction() {
 
-  if (!/^[1-9]\d*$/.test(totalInput.value)) {
+  const total = Number(totalInput.value);
+  const people = Number(peopleInput.value);
+
+  if (
+    !/^[1-9]\d*$/.test(totalInput.value) ||
+    !Number.isSafeInteger(total)
+  ) {
     alert(
       "合計金額を1円以上の整数で入力してください。"
     );
@@ -1506,11 +1616,20 @@ function validateInputsForAction() {
     return false;
   }
 
-  if (!/^[1-9]\d*$/.test(peopleInput.value)) {
+  if (
+    !/^[1-9]\d*$/.test(peopleInput.value) ||
+    !Number.isSafeInteger(people)
+  ) {
     alert(
       "人数を1人以上の整数で入力してください。"
     );
     peopleInput.focus();
+    return false;
+  }
+
+  if (!calculate()) {
+    alert("この金額と人数では安全に計算できません。");
+    totalInput.focus();
     return false;
   }
 
@@ -1566,7 +1685,7 @@ roundingInputs.forEach(
 
 /* ==================================================
    リセット
-   ★ 必ず「そのまま」に戻す
+   ★ 必ず「1円（四捨五入）」に戻す
 ================================================== */
 
 resetButton.addEventListener(
@@ -1617,21 +1736,8 @@ copyButton.addEventListener(
       return;
     }
 
-    const total =
-      Number(totalInput.value) || 0;
-
-    const people =
-      Number(peopleInput.value) || 1;
-
-    const amount =
-      resultElement.textContent;
-
-
     const text =
-      `割り勘結果\n` +
-      `総額：${formatNumber(total)}円\n` +
-      `人数：${people}人\n` +
-      `1人あたり：${amount}円`;
+      buildShareText(currentSplitResult);
 
 
     try {
@@ -1680,14 +1786,15 @@ copyButton.addEventListener(
 
 function clearReceiptForShare() {
 
+  shareGenerationGuard.cancel();
   receiptFileForShare = null;
   shareImageFile = null;
   shareButton.disabled = true;
   receiptPreviewButton.hidden = true;
   receiptPreviewImage.removeAttribute("src");
   receiptLargeImage.removeAttribute("src");
-  shareSheet.classList.remove("show");
-  imageLightbox.classList.remove("show");
+  closeModal(imageLightbox);
+  closeModal(shareSheet);
   shareActionStatus.textContent = "";
   receiptSelectionStatus.classList.remove("show");
 
@@ -1768,10 +1875,10 @@ function drawRoundedRect(context, x, y, width, height, radius) {
 }
 
 
-async function createShareImageFile() {
+async function createShareImageFile(snapshot) {
 
   const { image, sourceUrl } =
-    await loadReceiptImage(receiptFileForShare);
+    await loadReceiptImage(snapshot.receiptFile);
 
 
   try {
@@ -1792,7 +1899,7 @@ async function createShareImageFile() {
     const receiptBoxHeight =
       receiptHeight + 52;
     const height =
-      180 + 310 + 98 + 54 + receiptBoxHeight + 92;
+      180 + 350 + 98 + 54 + receiptBoxHeight + 92;
     const canvas =
       document.createElement("canvas");
 
@@ -1804,12 +1911,8 @@ async function createShareImageFile() {
     const context =
       canvas.getContext("2d");
 
-    const total =
-      Number(totalInput.value) || 0;
-    const people =
-      Number(peopleInput.value) || 1;
-    const amount =
-      resultElement.textContent;
+    const result =
+      snapshot.splitResult;
 
 
     context.fillStyle = "#ffffff";
@@ -1818,8 +1921,8 @@ async function createShareImageFile() {
     const headerGradient =
       context.createLinearGradient(0, 0, width, 180);
 
-    headerGradient.addColorStop(0, "#0ea5e9");
-    headerGradient.addColorStop(1, "#4f46e5");
+    headerGradient.addColorStop(0, "#7c3aed");
+    headerGradient.addColorStop(1, "#2563eb");
     context.fillStyle = headerGradient;
     context.fillRect(0, 0, width, 180);
 
@@ -1836,21 +1939,32 @@ async function createShareImageFile() {
     context.font = "700 34px sans-serif";
     context.fillText("1人あたり", width / 2, 292);
     context.font = "800 112px sans-serif";
-    context.fillText(`${amount}円`, width / 2, 418);
+    context.fillText(
+      `${formatNumber(result.perPerson)}円`,
+      width / 2,
+      418
+    );
 
     context.fillStyle = "#3c5772";
     context.font = "700 34px sans-serif";
     context.fillText(
-      `合計 ${formatNumber(total)}円 ／ ${people}人`,
+      `総額 ${formatNumber(result.total)}円 ／ ${result.people}人`,
       width / 2,
-      560
+      535
+    );
+
+    context.font = "700 28px sans-serif";
+    context.fillText(
+      formatDifference(result),
+      width / 2,
+      580
     );
 
     context.fillStyle = "#52677e";
     context.font = "700 28px sans-serif";
-    context.fillText("レシート", width / 2, 624);
+    context.fillText("レシート", width / 2, 664);
 
-    const receiptBoxY = 654;
+    const receiptBoxY = 694;
     const receiptBoxX = padding;
     const receiptBoxWidth = width - padding * 2;
 
@@ -1927,10 +2041,17 @@ async function showShareSheet() {
     return;
   }
 
+  const snapshot = {
+    receiptFile: receiptFileForShare,
+    splitResult: { ...currentSplitResult }
+  };
+  const requestId =
+    shareGenerationGuard.begin();
 
-  shareSheet.classList.add("show");
+  openModal(shareSheet, closeSheetButton, shareButton);
   receiptPreviewButton.hidden = true;
   openShareButton.disabled = true;
+  openShareButton.textContent = "共有先を開く";
   shareActionStatus.textContent =
     "共有画像を作成しています…";
 
@@ -1944,10 +2065,19 @@ async function showShareSheet() {
     }
 
 
-    shareImageFile =
-      await createShareImageFile();
-    shareImageUrl =
-      URL.createObjectURL(shareImageFile);
+    const generatedFile =
+      await createShareImageFile(snapshot);
+
+    if (
+      !shareGenerationGuard.isCurrent(requestId) ||
+      receiptFileForShare !== snapshot.receiptFile ||
+      !shareSheet.open
+    ) {
+      return;
+    }
+
+    shareImageFile = generatedFile;
+    shareImageUrl = URL.createObjectURL(generatedFile);
 
     receiptPreviewImage.src =
       shareImageUrl;
@@ -1955,11 +2085,20 @@ async function showShareSheet() {
       shareImageUrl;
     receiptPreviewButton.hidden = false;
     openShareButton.disabled = false;
+    openShareButton.textContent =
+      canShareImage(generatedFile)
+        ? "共有先を開く"
+        : "共有画像を保存";
     shareActionStatus.textContent = "";
 
   } catch (error) {
 
+    if (!shareGenerationGuard.isCurrent(requestId)) {
+      return;
+    }
+
     shareImageFile = null;
+    openShareButton.disabled = true;
     shareActionStatus.textContent =
       "共有画像を作成できませんでした。";
 
@@ -1970,8 +2109,9 @@ async function showShareSheet() {
 
 function closeShareSheet() {
 
-  shareSheet.classList.remove("show");
-  imageLightbox.classList.remove("show");
+  shareGenerationGuard.cancel();
+  closeModal(imageLightbox);
+  closeModal(shareSheet);
 
 }
 
@@ -1986,6 +2126,15 @@ closeSheetButton.addEventListener(
   "click",
   closeShareSheet
 );
+
+shareSheet.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeShareSheet();
+});
+
+shareSheet.addEventListener("close", () => {
+  restoreDialogTrigger(shareSheet);
+});
 
 
 /* 背景だけをタップした場合に閉じる。確認画面本体のタップでは閉じない。 */
@@ -2004,7 +2153,11 @@ shareSheet.addEventListener(
 receiptPreviewButton.addEventListener(
   "click",
   () => {
-    imageLightbox.classList.add("show");
+    openModal(
+      imageLightbox,
+      lightboxClose,
+      receiptPreviewButton
+    );
   }
 );
 
@@ -2012,9 +2165,18 @@ receiptPreviewButton.addEventListener(
 lightboxClose.addEventListener(
   "click",
   () => {
-    imageLightbox.classList.remove("show");
+    closeModal(imageLightbox);
   }
 );
+
+imageLightbox.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeModal(imageLightbox);
+});
+
+imageLightbox.addEventListener("close", () => {
+  restoreDialogTrigger(imageLightbox);
+});
 
 
 /* 背景だけをタップした場合に閉じる。画像本体のタップでは閉じない。 */
@@ -2023,11 +2185,42 @@ imageLightbox.addEventListener(
   event => {
 
     if (event.target === imageLightbox) {
-      imageLightbox.classList.remove("show");
+      closeModal(imageLightbox);
     }
 
   }
 );
+
+
+function canShareImage(file) {
+
+  if (!file || !navigator.share || !navigator.canShare) {
+    return false;
+  }
+
+  return navigator.canShare({ files: [file] });
+
+}
+
+
+function downloadShareImage(file) {
+
+  const downloadUrl =
+    URL.createObjectURL(file);
+  const link =
+    document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(downloadUrl);
+  }, 0);
+
+}
 
 
 openShareButton.addEventListener(
@@ -2043,24 +2236,16 @@ openShareButton.addEventListener(
     }
 
 
+    if (!canShareImage(shareImageFile)) {
+      downloadShareImage(shareImageFile);
+      shareActionStatus.textContent =
+        "共有画像を保存しました。保存先から共有できます。";
+      return;
+    }
+
     const shareData = {
       files: [shareImageFile]
     };
-
-
-    if (
-      !navigator.share ||
-      !navigator.canShare ||
-      !navigator.canShare(shareData)
-    ) {
-
-      shareActionStatus.textContent =
-        "このブラウザーでは画像付き共有に対応していません。";
-
-      return;
-
-    }
-
 
     try {
 
@@ -2068,9 +2253,11 @@ openShareButton.addEventListener(
 
     } catch (error) {
 
-      /* 共有先の選択を取り消した場合も、確認画面は閉じない */
+      const shareError =
+        classifyShareError(error);
+
       shareActionStatus.textContent =
-        "共有はキャンセルされました。";
+        shareError.message;
 
     }
 
@@ -2112,7 +2299,7 @@ receiptInput.addEventListener(
 analyticsAcceptButton.addEventListener(
   "click",
   () => {
-    applyAnalyticsConsent("accepted", false);
+    applyAnalyticsConsent("accepted");
   }
 );
 
@@ -2120,7 +2307,7 @@ analyticsAcceptButton.addEventListener(
 analyticsRejectButton.addEventListener(
   "click",
   () => {
-    applyAnalyticsConsent("rejected", false);
+    applyAnalyticsConsent("rejected");
   }
 );
 
@@ -2128,15 +2315,17 @@ analyticsRejectButton.addEventListener(
 analyticsDetailsButton.addEventListener(
   "click",
   () => {
-    analyticsConsent.hidden = true;
-    openPrivacyDialog();
+    setAnalyticsConsentVisible(false);
+    openPrivacyDialog(analyticsDetailsButton);
   }
 );
 
 
 privacyButton.addEventListener(
   "click",
-  openPrivacyDialog
+  () => {
+    openPrivacyDialog(privacyButton);
+  }
 );
 
 
@@ -2146,7 +2335,7 @@ privacyCloseButton.addEventListener(
     closePrivacyDialog();
 
     if (!getAnalyticsConsent()) {
-      analyticsConsent.hidden = false;
+      setAnalyticsConsentVisible(true);
     }
   }
 );
@@ -2156,7 +2345,7 @@ privacyAcceptButton.addEventListener(
   "click",
   () => {
     closePrivacyDialog();
-    applyAnalyticsConsent("accepted", false);
+    applyAnalyticsConsent("accepted");
   }
 );
 
@@ -2165,7 +2354,7 @@ privacyRejectButton.addEventListener(
   "click",
   () => {
     closePrivacyDialog();
-    applyAnalyticsConsent("rejected", true);
+    applyAnalyticsConsent("rejected");
   }
 );
 
@@ -2177,15 +2366,28 @@ privacyDialog.addEventListener(
       closePrivacyDialog();
 
       if (!getAnalyticsConsent()) {
-        analyticsConsent.hidden = false;
+        setAnalyticsConsentVisible(true);
       }
     }
   }
 );
 
+privacyDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  closePrivacyDialog();
+
+  if (!getAnalyticsConsent()) {
+    setAnalyticsConsentVisible(true);
+  }
+});
+
+privacyDialog.addEventListener("close", () => {
+  restoreDialogTrigger(privacyDialog);
+});
+
 /* ==================================================
    初期状態
-   ★ 常に「そのまま」
+   ★ 常に「1円（四捨五入）」
 ================================================== */
 
 document.getElementById(
