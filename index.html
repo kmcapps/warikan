@@ -573,6 +573,23 @@ footer {
   color: #0369a1;
 }
 
+#ocrThumbnail {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  margin: 12px auto;
+  object-fit: contain;
+}
+
+#ocrStatus {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#ocrDialog [hidden] {
+  display: none;
+}
+
 .privacy-actions {
   margin-top: 18px;
 }
@@ -955,6 +972,9 @@ footer {
           type="button"
         >レシート画像を追加（任意）</button>
 
+        <button class="receipt-add-button" id="receiptOcrButton" type="button" disabled aria-busy="false">画像から合計金額を読み取る</button>
+        <p id="ocrStatus" role="status" aria-live="polite"></p>
+
         <div
           class="receipt-selection-status"
           id="receiptSelectionStatus"
@@ -976,6 +996,19 @@ footer {
     </section>
 
   </main>
+  <!-- OCR同意はGA4の同意とは独立。金額は確認操作まで反映しない。 -->
+  <dialog class="sheet" id="ocrDialog" aria-labelledby="ocrTitle">
+    <div class="sheet-body">
+      <h2 id="ocrTitle">レシートの金額を読み取る</h2>
+      <img id="ocrThumbnail" alt="読み取るレシート画像">
+      <p class="privacy-dialog-text" id="ocrMessage" aria-live="polite"></p>
+      <div class="sheet-actions">
+        <button class="close-sheet" id="ocrManualButton" type="button">送信せず手入力</button>
+        <button class="open-share" id="ocrConsentButton" type="button">同意して読み取る</button>
+        <button class="open-share" id="ocrAcceptButton" type="button" hidden>この金額を使う</button>
+      </div>
+    </div>
+  </dialog>
   <!-- 共有前の確認画面 -->
   <dialog
     class="sheet"
@@ -1292,6 +1325,120 @@ const shareGenerationGuard =
 const dialogTriggers =
   new WeakMap();
 
+const receiptOcrButton = document.getElementById("receiptOcrButton");
+const ocrDialog = document.getElementById("ocrDialog");
+const ocrThumbnail = document.getElementById("ocrThumbnail");
+const ocrMessage = document.getElementById("ocrMessage");
+const ocrStatus = document.getElementById("ocrStatus");
+const ocrConsentButton = document.getElementById("ocrConsentButton");
+const ocrAcceptButton = document.getElementById("ocrAcceptButton");
+const ocrManualButton = document.getElementById("ocrManualButton");
+const ocrGuard = createLatestRequestGuard();
+const receiptOcrEndpoint = "https://warican-azure-receipt.kmcapps-dev.workers.dev/api/receipt-total";
+let ocrCandidate = null;
+let ocrThumbnailUrl = null;
+let ocrController = null;
+
+function cancelReceiptOcr() {
+  ocrGuard.cancel();
+  ocrCandidate = null;
+  if (ocrController) ocrController.abort();
+  ocrController = null;
+  receiptOcrButton.setAttribute("aria-busy", "false");
+  receiptOcrButton.disabled = !receiptFileForShare;
+  closeModal(ocrDialog);
+}
+
+receiptOcrButton.addEventListener("click", () => {
+  if (!receiptFileForShare) return;
+  cancelReceiptOcr();
+  if (ocrThumbnailUrl) URL.revokeObjectURL(ocrThumbnailUrl);
+  ocrThumbnailUrl = URL.createObjectURL(receiptFileForShare);
+  ocrThumbnail.src = ocrThumbnailUrl;
+  ocrMessage.textContent = "この画像をCloudflare経由でMicrosoft Azureへ送信します。店名・日時・個人情報など、写っている内容を確認してください。読み取った金額が正しいことを確認してから使用してください。JPEG / PNGに対応しています。大きな画像は送信前に自動で調整します。";
+  ocrConsentButton.hidden = false;
+  ocrConsentButton.disabled = false;
+  ocrAcceptButton.hidden = true;
+  ocrManualButton.textContent = "送信せず手入力";
+  ocrStatus.textContent = "";
+  openModal(ocrDialog, ocrManualButton, receiptOcrButton);
+});
+
+ocrConsentButton.addEventListener("click", async () => {
+  if (!ocrDialog.open || ocrConsentButton.disabled || !receiptFileForShare) return;
+  const image = receiptFileForShare;
+  const requestId = ocrGuard.begin();
+  const controller = new AbortController();
+  ocrController = controller;
+  ocrConsentButton.disabled = true;
+  receiptOcrButton.disabled = true;
+  receiptOcrButton.setAttribute("aria-busy", "true");
+  ocrMessage.textContent = "金額を読み取り中…";
+  ocrManualButton.textContent = "キャンセルして手入力";
+  let result;
+  let preparingImage = false;
+  try {
+    const { analyzeReceiptTotal } = await import("./azure-receipt-client.mjs");
+    // Cancellation during module loading must not initiate an upload.
+    if (!ocrGuard.isCurrent(requestId) || controller.signal.aborted) return;
+    preparingImage = true;
+    const { prepareReceiptImage } = await import("./receipt-image.mjs");
+    if (!ocrGuard.isCurrent(requestId) || controller.signal.aborted) return;
+    const uploadImage = await prepareReceiptImage(image, {signal:controller.signal});
+    if (!ocrGuard.isCurrent(requestId) || controller.signal.aborted || image !== receiptFileForShare || !ocrDialog.open) return;
+    preparingImage = false;
+    result = await analyzeReceiptTotal(uploadImage, {endpoint:receiptOcrEndpoint, signal:controller.signal});
+  } catch {
+    result = {ok:false, reason:preparingImage ? "image_adjustment_failed" : "request_failed"};
+  } finally {
+    if (ocrController === controller) {
+      ocrController = null;
+      receiptOcrButton.disabled = !receiptFileForShare;
+    }
+    receiptOcrButton.setAttribute("aria-busy", ocrController ? "true" : "false");
+  }
+  if (!ocrGuard.isCurrent(requestId) || image !== receiptFileForShare || !ocrDialog.open) return;
+  if (!result?.ok || !Number.isSafeInteger(result.total) || result.total < 1) {
+    cancelReceiptOcr();
+    ocrStatus.textContent = result?.reason === "image_adjustment_failed"
+      ? "画像サイズを調整できませんでした。別の画像を選ぶか、手入力してください。"
+      : "金額を読み取れませんでした。手入力してください。";
+    totalInput.focus();
+    return;
+  }
+  ocrCandidate = {total:result.total, confidence:result.confidence, image, requestId};
+  ocrMessage.textContent = "合計金額は " + formatNumber(result.total) + "円 ですか？";
+  ocrConsentButton.hidden = true;
+  ocrAcceptButton.hidden = false;
+  ocrManualButton.textContent = "修正する";
+  ocrAcceptButton.focus();
+});
+
+ocrAcceptButton.addEventListener("click", () => {
+  if (!ocrCandidate || !ocrDialog.open || !ocrGuard.isCurrent(ocrCandidate.requestId) || ocrCandidate.image !== receiptFileForShare) return;
+  totalInput.value = String(ocrCandidate.total);
+  calculate();
+  cancelReceiptOcr();
+  ocrStatus.textContent = "確認した金額を反映しました。";
+});
+ocrManualButton.addEventListener("click", () => {
+  cancelReceiptOcr();
+  requestAnimationFrame(() => totalInput.focus());
+});
+ocrDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  cancelReceiptOcr();
+});
+ocrDialog.addEventListener("close", () => {
+  // Native close is queued: an earlier close must not cancel a reopened dialog.
+  if (ocrDialog.open) return;
+  ocrGuard.cancel();
+  ocrCandidate = null;
+  if (ocrController) ocrController.abort();
+  restoreDialogTrigger(ocrDialog);
+});
+totalInput.addEventListener("input", cancelReceiptOcr);
+
 const roundingInputs =
   document.querySelectorAll(
     'input[name="rounding"]'
@@ -1428,8 +1575,9 @@ function openModal(dialog, focusTarget, trigger) {
     dialog.showModal();
   }
 
+  focusTarget.focus();
   requestAnimationFrame(() => {
-    focusTarget.focus();
+    if (dialog.open) focusTarget.focus();
   });
 
 }
@@ -1804,6 +1952,13 @@ copyButton.addEventListener(
 
 function clearReceiptForShare() {
 
+  cancelReceiptOcr();
+  receiptOcrButton.disabled = true;
+  ocrStatus.textContent = "";
+  if (ocrThumbnailUrl) URL.revokeObjectURL(ocrThumbnailUrl);
+  ocrThumbnailUrl = null;
+  ocrThumbnail.removeAttribute("src");
+
   shareGenerationGuard.cancel();
   receiptFileForShare = null;
   shareImageFile = null;
@@ -1835,6 +1990,7 @@ function setReceiptForShare(file) {
   clearReceiptForShare();
 
   receiptFileForShare = file;
+  receiptOcrButton.disabled = false;
   shareButton.disabled = false;
   receiptSelectionStatus.classList.add("show");
 

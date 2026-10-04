@@ -1,0 +1,16 @@
+{
+  "name": "warican",
+  "private": true,
+  "scripts": {
+    "test:static": "node --test tests/static-validation.test.cjs",
+    "test:core": "node --test tests/warican-core.test.cjs",
+    "test:ui": "node --test tests/warican-ui.test.cjs",
+    "test:azure-helper": "node --test tests/azure-receipt-client.test.cjs",
+    "test:azure-ui": "node --test tests/azure-ocr-ui.test.cjs",
+    "test": "node --test tests/static-validation.test.cjs tests/warican-core.test.cjs tests/warican-ui.test.cjs tests/azure-receipt-client.test.cjs tests/azure-ocr-ui.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "playwright-core": "1.62.1"
+  }
+}
