@@ -590,6 +590,19 @@ footer {
   display: none;
 }
 
+#ocrMessage[data-state="loading"],
+#ocrMessage[data-state="confirm"] {
+  text-align: center;
+}
+
+#ocrMessage .ocr-amount {
+  color: #0f172a;
+  font-size: clamp(28px, 10vw, 44px);
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
 .privacy-actions {
   margin-top: 18px;
 }
@@ -1355,7 +1368,8 @@ receiptOcrButton.addEventListener("click", () => {
   if (ocrThumbnailUrl) URL.revokeObjectURL(ocrThumbnailUrl);
   ocrThumbnailUrl = URL.createObjectURL(receiptFileForShare);
   ocrThumbnail.src = ocrThumbnailUrl;
-  ocrMessage.textContent = "この画像をCloudflare経由でMicrosoft Azureへ送信します。店名・日時・個人情報など、写っている内容を確認してください。読み取った金額が正しいことを確認してから使用してください。JPEG / PNGに対応しています。大きな画像は送信前に自動で調整します。";
+  ocrMessage.dataset.state = "consent";
+  ocrMessage.textContent = "画像をCloudflare経由でMicrosoft Azureへ送信します。個人情報が写っていないか確認してください。読み取った金額は使用前に確認してください。";
   ocrConsentButton.hidden = false;
   ocrConsentButton.disabled = false;
   ocrAcceptButton.hidden = true;
@@ -1373,6 +1387,7 @@ ocrConsentButton.addEventListener("click", async () => {
   ocrConsentButton.disabled = true;
   receiptOcrButton.disabled = true;
   receiptOcrButton.setAttribute("aria-busy", "true");
+  ocrMessage.dataset.state = "loading";
   ocrMessage.textContent = "金額を読み取り中…";
   ocrManualButton.textContent = "キャンセルして手入力";
   let result;
@@ -1407,7 +1422,11 @@ ocrConsentButton.addEventListener("click", async () => {
     return;
   }
   ocrCandidate = {total:result.total, confidence:result.confidence, image, requestId};
-  ocrMessage.textContent = "合計金額は " + formatNumber(result.total) + "円 ですか？";
+  ocrMessage.dataset.state = "confirm";
+  const amount = document.createElement("strong");
+  amount.className = "ocr-amount";
+  amount.textContent = formatNumber(result.total) + "円";
+  ocrMessage.replaceChildren("合計金額は ", amount, " ですか？");
   ocrConsentButton.hidden = true;
   ocrAcceptButton.hidden = false;
   ocrManualButton.textContent = "修正する";
@@ -1428,6 +1447,9 @@ ocrManualButton.addEventListener("click", () => {
 ocrDialog.addEventListener("cancel", event => {
   event.preventDefault();
   cancelReceiptOcr();
+});
+ocrDialog.addEventListener("click", event => {
+  if (event.target === ocrDialog) cancelReceiptOcr();
 });
 ocrDialog.addEventListener("close", () => {
   // Native close is queued: an earlier close must not cancel a reopened dialog.

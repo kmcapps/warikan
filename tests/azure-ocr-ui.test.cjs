@@ -109,7 +109,7 @@ for (const [name,reply] of [
   await page.locator('#total').fill('3000');
   assert.equal(await page.locator('#result').textContent(), '1,500');
 });
-for (const action of ['replace','reset','manual','cancel']) test(`Stale result after ${action} cannot reopen confirmation or overwrite state`, async t => {
+for (const action of ['replace','reset','manual','cancel','background']) test(`Stale result after ${action} cannot reopen confirmation or overwrite state`, async t => {
   let release;
   const pending = new Promise(resolve => release = resolve);
   const {page,requests} = await setup(t,async route => {
@@ -136,6 +136,7 @@ for (const action of ['replace','reset','manual','cancel']) test(`Stale result a
     const input = document.querySelector('#total'); input.value='3200'; input.dispatchEvent(new Event('input'));
   });
   if (action === 'cancel') await page.keyboard.press('Escape');
+  if (action === 'background') await page.locator('#ocrDialog').click({position:{x:5,y:5}});
   release();
   // Wait for the actual helper completion, not a fixed stale-result sleep.
   await page.waitForFunction(() => window.__ocrBodyRead && document.querySelector('#receiptOcrButton').getAttribute('aria-busy') === 'false');
@@ -305,11 +306,10 @@ for(const scenario of ['quality','resize','exhausted','null-blob','cancel-encode
   } else assert.equal(result.failed,true);
 });
 
-test('Consent explains user confirmation and automatic adjustment on mobile and desktop',async t=>{
+test('Consent explains external transmission, personal information, and user confirmation concisely',async t=>{
   const {page,requests,errors}=await setup(t,undefined,{width:390,height:844});
   await page.locator('#receiptOcrButton').click();
-  assert.match(await page.locator('#ocrMessage').textContent(),/正しいことを確認してから使用してください/);
-  assert.match(await page.locator('#ocrMessage').textContent(),/大きな画像は送信前に自動で調整/);
+  assert.equal(await page.locator('#ocrMessage').textContent(),'画像をCloudflare経由でMicrosoft Azureへ送信します。個人情報が写っていないか確認してください。読み取った金額は使用前に確認してください。');
   await page.locator('#ocrThumbnail').evaluate(image=>image.decode());
   const screenshots='C:/Users/heheh/.codex/visualizations/2026/09/20/01a0be98-cfb7-7383-82ca-2f4ed97c2e68';
   await page.screenshot({path:path.join(screenshots,'warican-compression-consent-mobile.png')});
@@ -320,5 +320,43 @@ test('Consent explains user confirmation and automatic adjustment on mobile and 
   assert.deepEqual(errors,[]);
   assert.equal(requests.length,0);
   await page.locator('#ocrManualButton').click();
+  assert.equal(await page.locator('#total').inputValue(),'1000');
+});
+
+for (const width of [320,390,1280]) test(`Confirmation stays centered on one line with prominent amount at ${width}px`,async t=>{
+  const {page,errors}=await setup(t,{ok:true,total:140,confidence:0.966},{width,height:900});
+  await start(page);
+  await page.locator('#ocrAcceptButton').waitFor({state:'visible'});
+  const layout=await page.locator('#ocrMessage').evaluate(message=>{
+    const range=document.createRange();range.selectNodeContents(message);
+    const boxes=[...range.getClientRects()];
+    const amount=message.querySelector('.ocr-amount');
+    return {align:getComputedStyle(message).textAlign,amountSize:amount&&parseFloat(getComputedStyle(amount).fontSize),weight:amount&&getComputedStyle(amount).fontWeight,
+      left:Math.min(...boxes.map(b=>b.left)),right:Math.max(...boxes.map(b=>b.right)),center:message.getBoundingClientRect().x+message.clientWidth/2,
+      height:message.getBoundingClientRect().height};
+  });
+  assert.equal(layout.align,'center');assert.ok(layout.amountSize>=28);assert.ok(Number(layout.weight)>=700);
+  assert.ok(Math.abs((layout.left+layout.right)/2-layout.center)<2);
+  assert.ok(layout.height<70,'confirmation must not become three lines');
+  assert.equal(await page.locator('#total').inputValue(),'1000');
+  await page.locator('#ocrMessage').click();
+  assert.equal(await page.locator('#ocrDialog').evaluate(d=>d.open),true);
+  await page.locator('#ocrDialog').click({position:{x:5,y:5}});
+  assert.equal(await page.locator('#ocrDialog').evaluate(d=>d.open),false);
+  assert.equal(await page.locator('#total').inputValue(),'1000');
+  await page.locator('#receiptOcrButton').click();
+  assert.equal(await page.locator('#ocrConsentButton').isVisible(),true);
+  assert.deepEqual(errors,[]);
+});
+
+test('Background dismissal before consent retains receipt and makes no upload',async t=>{
+  const {page,requests}=await setup(t);
+  await page.locator('#receiptOcrButton').click();
+  await page.locator('#ocrThumbnail').click();
+  assert.equal(await page.locator('#ocrDialog').evaluate(d=>d.open),true);
+  await page.locator('#ocrDialog').click({position:{x:5,y:5}});
+  assert.equal(await page.locator('#ocrDialog').evaluate(d=>d.open),false);
+  assert.equal(requests.length,0);
+  assert.equal(await page.locator('#shareButton').isEnabled(),true);
   assert.equal(await page.locator('#total').inputValue(),'1000');
 });
